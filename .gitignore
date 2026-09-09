@@ -1,0 +1,21 @@
+# Environment files
+.env
+.env.*
+
+# Laravel
+frontend/vendor/
+frontend/node_modules/
+frontend/storage/logs/*
+frontend/bootstrap/cache/*
+
+# .NET
+**/bin/
+**/obj/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
