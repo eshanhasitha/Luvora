@@ -5,7 +5,7 @@ services:
     container_name: luvora-postgres
     environment:
       POSTGRES_USER: luvora
-      POSTGRES_PASSWORD: eshanhasitha
+      POSTGRES_PASSWORD: yourpassword
       POSTGRES_DB: luvora
     ports:
       - "5432:5432"
