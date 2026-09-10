@@ -4,9 +4,9 @@ services:
     image: postgres:17
     container_name: luvora-postgres
     environment:
-      POSTGRES_USER: luvora
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: luvora
+      POSTGRES_USER: ${env.POSTGRES_USER}
+      POSTGRES_PASSWORD: ${env.POSTGRES_PASSWORD}
+      POSTGRES_DB: ${env.POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
