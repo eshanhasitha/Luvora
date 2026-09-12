@@ -13,13 +13,16 @@ public class AuthController : ControllerBase
 {
     private readonly AuthDbContext _dbContext;
     private readonly PasswordService _passwordService;
+    private readonly TokenService _tokenService;
 
     public AuthController(
     AuthDbContext dbContext,
-    PasswordService passwordService)
+    PasswordService passwordService,
+    TokenService tokenService)
     {
         _dbContext = dbContext;
         _passwordService = passwordService;
+        _tokenService = tokenService;
     }
 
     [HttpPost("register")]
@@ -108,9 +111,12 @@ public class AuthController : ControllerBase
             });
         }
 
+        var token = _tokenService.GenerateAccessToken(user);
+
         return Ok(new
         {
             message = "Login successful.",
+            token,
             user = new
             {
                 user.Id,
