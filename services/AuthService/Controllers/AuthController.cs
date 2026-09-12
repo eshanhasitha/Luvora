@@ -70,4 +70,55 @@ public class AuthController : ControllerBase
             }
         });
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null)
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid email or password."
+            });
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized(new
+            {
+                message = "This account is inactive."
+            });
+        }
+
+        var passwordValid = _passwordService.VerifyPassword(
+            request.Password,
+            user.PasswordHash
+        );
+
+        if (!passwordValid)
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid email or password."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Login successful.",
+            user = new
+            {
+                user.Id,
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                user.Role
+            }
+        });
+    }
 }
