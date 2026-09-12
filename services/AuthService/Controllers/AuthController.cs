@@ -3,6 +3,7 @@ using AuthService.Application.DTOs;
 using AuthService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AuthService.Services;
 
 namespace AuthService.Controllers;
 
@@ -11,10 +12,14 @@ namespace AuthService.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AuthDbContext _dbContext;
+    private readonly PasswordService _passwordService;
 
-    public AuthController(AuthDbContext dbContext)
+    public AuthController(
+    AuthDbContext dbContext,
+    PasswordService passwordService)
     {
         _dbContext = dbContext;
+        _passwordService = passwordService;
     }
 
     [HttpPost("register")]
@@ -40,7 +45,7 @@ public class AuthController : ControllerBase
             LastName = request.LastName.Trim(),
             Email = email,
 
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            PasswordHash = _passwordService.HashPassword(request.Password),
 
             Role = "Customer",
             IsActive = true,

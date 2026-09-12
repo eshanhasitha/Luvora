@@ -1,5 +1,6 @@
 using Serilog;
 using AuthService.Data;
+using AuthService.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,8 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("AuthDatabase")
     ));
+
+builder.Services.AddScoped<PasswordService>();
 
 var app = builder.Build();
 
