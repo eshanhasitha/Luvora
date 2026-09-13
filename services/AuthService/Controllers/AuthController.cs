@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AuthService.Services;
 using AuthService.DTOs;
+using AuthService.Constants;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AuthService.Controllers;
 
@@ -233,6 +235,56 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             message = "Logged out successfully."
+        });
+    }
+
+    [Authorize(Roles = Roles.Admin)]
+    [HttpPut("users/{userId:guid}/role")]
+    public async Task<IActionResult> UpdateRole(
+        Guid userId,
+        UpdateRoleRequest request)
+    {
+        var validRoles = new[]
+        {
+            Roles.Customer,
+            Roles.Admin,
+            Roles.Staff,
+            Roles.DeliveryAgent
+        };
+
+        if (!validRoles.Contains(request.Role))
+        {
+            return BadRequest(new
+            {
+                message = "Invalid role."
+            });
+        }
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return NotFound(new
+            {
+                message = "User not found."
+            });
+        }
+
+        user.Role = request.Role;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "User role updated.",
+            user = new
+            {
+                user.Id,
+                user.Email,
+                user.Role
+            }
         });
     }
 }

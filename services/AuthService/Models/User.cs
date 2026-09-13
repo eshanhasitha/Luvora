@@ -1,3 +1,5 @@
+using AuthService.Constants;
+
 namespace AuthService.Models;
 
 public class User
@@ -12,7 +14,7 @@ public class User
 
     public string PasswordHash { get; set; } = string.Empty;
 
-    public string Role { get; set; } = "Customer";
+    public string Role { get; set; } = Roles.Customer;
 
     public bool IsActive { get; set; } = true;
 
