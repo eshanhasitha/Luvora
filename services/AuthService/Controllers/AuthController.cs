@@ -203,4 +203,36 @@ public class AuthController : ControllerBase
             expiresInMinutes = 15
         });
     }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(
+        RefreshTokenRequest request)
+    {
+        var tokenHash = _refreshTokenService.HashToken(
+            request.RefreshToken
+        );
+
+        var storedToken = await _dbContext.RefreshTokens
+            .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
+
+        if (storedToken == null)
+        {
+            return NotFound(new
+            {
+                message = "Refresh token not found."
+            });
+        }
+
+        if (!storedToken.IsRevoked)
+        {
+            storedToken.RevokedAt = DateTime.UtcNow;
+
+            await _dbContext.SaveChangesAsync();
+        }
+
+        return Ok(new
+        {
+            message = "Logged out successfully."
+        });
+    }
 }
