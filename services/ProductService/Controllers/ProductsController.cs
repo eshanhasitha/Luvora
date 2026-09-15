@@ -43,12 +43,18 @@ public class ProductsController : ControllerBase
             }); 
         } 
         
-        var slug = GenerateSlug(request.Name); 
-        var slugExists = await _dbContext.Products 
-            .AnyAsync(p => p.Slug == slug); 
-        if (slugExists) 
+        var baseSlug = GenerateSlug(request.Name); 
+        if (string.IsNullOrWhiteSpace(baseSlug)) 
         { 
-            slug = $"{slug}-{Guid.NewGuid():N}"; 
+            return BadRequest(new { message = "Product name is invalid." }); 
+        }
+
+        var slug = baseSlug; 
+        var slugSuffix = 2; 
+        while (await _dbContext.Products.AnyAsync(p => p.Slug == slug)) 
+        { 
+            slug = $"{baseSlug}-{slugSuffix}"; 
+            slugSuffix++; 
         } 
 
         var product = new Product 
@@ -213,5 +219,172 @@ public class ProductsController : ControllerBase
                         : '-') 
                 .ToArray() 
         ).Trim('-'); 
-    } 
+    }
+
+    [HttpPost("categories")]
+    public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return BadRequest(new { message = "Category name is required." });
+        }
+
+        var baseSlug = GenerateSlug(name);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            return BadRequest(new { message = "Category name is invalid." });
+        }
+
+        var slug = baseSlug;
+        var slugSuffix = 2;
+        while (await _dbContext.Categories.AnyAsync(c => c.Slug == slug))
+        {
+            slug = $"{baseSlug}-{slugSuffix}";
+            slugSuffix++;
+        }
+
+        var category = new Category
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Slug = slug,
+            Description = $"{name} category",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Categories.Add(category);
+        await _dbContext.SaveChangesAsync();
+
+        return Created($"/api/products/categories/{category.Id}", category);
+    }
+
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, UpdateProductRequest request)
+    {
+        var product = await _dbContext.Products
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+        {
+            return NotFound(new { message = "Product not found." });
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var categoryExists = await _dbContext.Categories
+            .AnyAsync(c => c.Id == request.CategoryId);
+        if (!categoryExists)
+        {
+            return BadRequest(new { message = "Category does not exist." });
+        }
+
+        var skuExists = await _dbContext.Products
+            .AnyAsync(p => p.SKU == request.SKU && p.Id != id);
+
+        if (skuExists)
+        {
+            return Conflict(new { message = "Another product already uses this SKU." });
+        }
+
+        var requestedName = request.Name.Trim();
+        var generatedSlug = GenerateSlug(requestedName);
+        if (string.IsNullOrWhiteSpace(generatedSlug))
+        {
+            return BadRequest(new { message = "Product name is invalid." });
+        }
+
+        if (string.Equals(product.Name.Trim(), requestedName, StringComparison.OrdinalIgnoreCase))
+        {
+            generatedSlug = product.Slug;
+        }
+        else
+        {
+            var baseSlug = generatedSlug;
+            var candidateSlug = baseSlug;
+            var suffix = 2;
+
+            while (await _dbContext.Products.AnyAsync(p => p.Slug == candidateSlug && p.Id != id))
+            {
+                candidateSlug = $"{baseSlug}-{suffix}";
+                suffix++;
+            }
+
+            generatedSlug = candidateSlug;
+        }
+
+        product.Name = requestedName;
+        product.CategoryId = request.CategoryId;
+        product.Description = request.Description.Trim();
+        product.Price = request.Price;
+        product.DiscountPrice = request.DiscountPrice;
+        product.Brand = request.Brand.Trim();
+        product.SKU = request.SKU.Trim();
+        product.Slug = generatedSlug;
+        product.IsActive = request.IsActive;
+        product.UpdatedAt = DateTime.UtcNow;
+
+        var existingImages = await _dbContext.ProductImages
+            .Where(i => i.ProductId == id)
+            .ToListAsync();
+
+        if (existingImages.Count > 0)
+        {
+            _dbContext.ProductImages.RemoveRange(existingImages);
+        }
+
+        var newImageOrder = 0;
+        foreach (var imageUrl in request.ImageUrls)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                continue;
+
+            _dbContext.ProductImages.Add(new ProductImage
+            {
+                Id = Guid.NewGuid(),
+                ProductId = product.Id,
+                ImageUrl = imageUrl.Trim(),
+                DisplayOrder = newImageOrder,
+                IsPrimary = newImageOrder == 0
+            });
+
+            newImageOrder++;
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        await _dbContext.Entry(product)
+            .Reference(p => p.Category)
+            .LoadAsync();
+
+        return Ok(ToResponse(product));
+    }
+
+    [HttpDelete("{id:guid}")] 
+    public async Task<IActionResult> Delete(Guid id) 
+    { 
+        var product = await _dbContext.Products 
+            .FirstOrDefaultAsync(p => p.Id == id); 
+        if (product == null) 
+        { 
+            return NotFound(new { message = "Product not found." }); 
+        } 
+        product.IsActive = false; 
+        product.UpdatedAt = DateTime.UtcNow; 
+        await _dbContext.SaveChangesAsync(); 
+        return Ok(new { message = "Product deactivated successfully." }); 
+    }
+
 }
