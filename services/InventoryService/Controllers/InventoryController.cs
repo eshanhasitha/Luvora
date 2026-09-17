@@ -142,4 +142,72 @@ public class InventoryController : ControllerBase
 
         return Ok(ToResponse(inventory));
     }
+
+    [HttpPost("release")]
+    public async Task<IActionResult> ReleaseStock(
+        ReleaseStockRequest request)
+    {
+        var inventory = await _dbContext.Inventories
+            .FirstOrDefaultAsync(
+                i => i.ProductId == request.ProductId);
+
+        if (inventory == null)
+        {
+            return NotFound(new
+            {
+                message = "Inventory not found."
+            });
+        }
+
+        if (inventory.ReservedQuantity < request.Quantity)
+        {
+            return Conflict(new
+            {
+                message = "Cannot release more stock than reserved.",
+                reservedQuantity = inventory.ReservedQuantity
+            });
+        }
+
+        inventory.ReservedQuantity -= request.Quantity;
+        inventory.AvailableQuantity += request.Quantity;
+        inventory.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(ToResponse(inventory));
+    }
+
+    [HttpPut("{productId:guid}")]
+    public async Task<IActionResult> Update(
+        Guid productId,
+        UpdateInventoryRequest request)
+    {
+        var inventory = await _dbContext.Inventories
+            .FirstOrDefaultAsync(
+                i => i.ProductId == productId);
+
+        if (inventory == null)
+        {
+            return NotFound(new
+            {
+                message = "Inventory not found."
+            });
+        }
+
+        inventory.AvailableQuantity =
+            request.AvailableQuantity;
+
+        inventory.ReorderLevel =
+            request.ReorderLevel;
+
+        inventory.IsActive =
+            request.IsActive;
+
+        inventory.UpdatedAt =
+            DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(ToResponse(inventory));
+    }
 }
