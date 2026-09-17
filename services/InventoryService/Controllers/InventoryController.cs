@@ -97,4 +97,49 @@ public class InventoryController : ControllerBase
             IsActive = inventory.IsActive
         };
     }
+
+    [HttpPost("reserve")]
+    public async Task<IActionResult> ReserveStock(
+        ReserveStockRequest request)
+    {
+        var inventory = await _dbContext.Inventories
+            .FirstOrDefaultAsync(
+                i => i.ProductId == request.ProductId);
+
+        if (inventory == null)
+        {
+            return NotFound(new
+            {
+                message = "Inventory not found."
+            });
+        }
+
+        if (!inventory.IsActive)
+        {
+            return BadRequest(new
+            {
+                message = "Inventory is inactive."
+            });
+        }
+
+        if (inventory.AvailableQuantity < request.Quantity)
+        {
+            return Conflict(new
+            {
+                message = "Insufficient stock.",
+                availableQuantity =
+                    inventory.AvailableQuantity
+            });
+        }
+
+        inventory.AvailableQuantity -= request.Quantity;
+
+        inventory.ReservedQuantity += request.Quantity;
+
+        inventory.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(ToResponse(inventory));
+    }
 }
