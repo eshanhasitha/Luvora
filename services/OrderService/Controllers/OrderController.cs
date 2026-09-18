@@ -1,0 +1,123 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using OrderService.Data;
+using OrderService.DTOs;
+using OrderService.Models;
+
+namespace OrderService.Controllers;
+
+[ApiController]
+[Route("api/orders")]
+public class OrderController : ControllerBase
+{
+    private readonly OrderDbContext _dbContext;
+
+    public OrderController(OrderDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateOrder(
+        CreateOrderRequest request)
+    {
+        if (request.Items == null ||
+            request.Items.Count == 0)
+        {
+            return BadRequest(new
+            {
+                message = "Order must contain at least one item."
+            });
+        }
+
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            UserId = request.UserId,
+            OrderNumber =
+                $"LUV-{DateTime.UtcNow:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}",
+            Status = "CREATED",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        foreach (var requestItem in request.Items)
+        {
+            var totalPrice =
+                requestItem.UnitPrice *
+                requestItem.Quantity;
+
+            var item = new OrderItem
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                ProductId = requestItem.ProductId,
+                Quantity = requestItem.Quantity,
+                UnitPrice = requestItem.UnitPrice,
+                TotalPrice = totalPrice,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            order.Items.Add(item);
+        }
+
+        order.TotalAmount =
+            order.Items.Sum(item => item.TotalPrice);
+
+        _dbContext.Orders.Add(order);
+
+        await _dbContext.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetOrder),
+            new { orderId = order.Id },
+            ToResponse(order)
+        );
+    }
+
+    [HttpGet("{orderId:guid}")]
+    public async Task<IActionResult> GetOrder(
+        Guid orderId)
+    {
+        var order = await _dbContext.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                o => o.Id == orderId);
+
+        if (order == null)
+        {
+            return NotFound(new
+            {
+                message = "Order not found."
+            });
+        }
+
+        return Ok(ToResponse(order));
+    }
+
+    private static OrderResponse ToResponse(
+        Order order)
+    {
+        return new OrderResponse
+        {
+            Id = order.Id,
+            UserId = order.UserId,
+            OrderNumber = order.OrderNumber,
+            Status = order.Status,
+            TotalAmount = order.TotalAmount,
+            CreatedAt = order.CreatedAt,
+
+            Items = order.Items
+                .Select(item => new OrderItemResponse
+                {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.TotalPrice
+                })
+                .ToList()
+        };
+    }
+}
