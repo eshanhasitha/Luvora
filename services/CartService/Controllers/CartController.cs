@@ -65,4 +65,60 @@ public class CartController : ControllerBase
             TotalAmount = items.Sum(i => i.TotalPrice)
         };
     }
+
+    [HttpPost("{userId:guid}/items")]
+    public async Task<IActionResult> AddItem(
+        Guid userId,
+        AddCartItemRequest request)
+    {
+        var cart = await _dbContext.Carts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+        {
+            cart = new Cart
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.Carts.Add(cart);
+        }
+
+        var existingItem = cart.Items
+            .FirstOrDefault(i =>
+                i.ProductId == request.ProductId);
+
+        if (existingItem != null)
+        {
+            existingItem.Quantity += request.Quantity;
+            existingItem.UnitPrice = request.UnitPrice;
+            existingItem.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            var item = new CartItem
+            {
+                Id = Guid.NewGuid(),
+                CartId = cart.Id,
+                ProductId = request.ProductId,
+                Quantity = request.Quantity,
+                UnitPrice = request.UnitPrice,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dbContext.CartItems.Add(item);
+        }
+
+        cart.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(ToResponse(cart));
+    }
+
 }
