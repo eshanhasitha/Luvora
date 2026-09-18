@@ -138,4 +138,50 @@ public class OrderController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("{orderId:guid}/cancel")]
+    public async Task<IActionResult> CancelOrder(
+        Guid orderId)
+    {
+        var order = await _dbContext.Orders
+            .FirstOrDefaultAsync(
+                o => o.Id == orderId);
+
+        if (order == null)
+        {
+            return NotFound(new
+            {
+                message = "Order not found."
+            });
+        }
+
+        var cancellableStatuses = new[]
+        {
+            "CREATED",
+            "PAYMENT_PENDING"
+        };
+
+        if (!cancellableStatuses.Contains(order.Status))
+        {
+            return Conflict(new
+            {
+                message =
+                    "Order cannot be cancelled in its current status.",
+                currentStatus = order.Status
+            });
+        }
+
+        order.Status = "CANCELLED";
+        order.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Order cancelled successfully.",
+            orderId = order.Id,
+            orderNumber = order.OrderNumber,
+            status = order.Status
+        });
+    }
 }
