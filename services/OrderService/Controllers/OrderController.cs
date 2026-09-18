@@ -120,4 +120,22 @@ public class OrderController : ControllerBase
                 .ToList()
         };
     }
+
+    [HttpGet("user/{userId:guid}")]
+    public async Task<IActionResult> GetUserOrders(
+        Guid userId)
+    {
+        var orders = await _dbContext.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .Where(o => o.UserId == userId)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        var response = orders
+            .Select(ToResponse)
+            .ToList();
+
+        return Ok(response);
+    }
 }
