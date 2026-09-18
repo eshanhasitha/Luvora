@@ -121,4 +121,83 @@ public class CartController : ControllerBase
         return Ok(ToResponse(cart));
     }
 
+    [HttpPut("{userId:guid}/items/{itemId:guid}")]
+    public async Task<IActionResult> UpdateItem(
+        Guid userId,
+        Guid itemId,
+        UpdateCartItemRequest request)
+    {
+        var cart = await _dbContext.Carts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+        {
+            return NotFound(new
+            {
+                message = "Cart not found."
+            });
+        }
+
+        var item = cart.Items
+            .FirstOrDefault(i => i.Id == itemId);
+
+        if (item == null)
+        {
+            return NotFound(new
+            {
+                message = "Cart item not found."
+            });
+        }
+
+        item.Quantity = request.Quantity;
+        item.UpdatedAt = DateTime.UtcNow;
+
+        cart.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(ToResponse(cart));
+    }
+
+    [HttpDelete("{userId:guid}/items/{itemId:guid}")]
+    public async Task<IActionResult> RemoveItem(
+        Guid userId,
+        Guid itemId)
+    {
+        var cart = await _dbContext.Carts
+            .Include(c => c.Items)
+            .FirstOrDefaultAsync(c => c.UserId == userId);
+
+        if (cart == null)
+        {
+            return NotFound(new
+            {
+                message = "Cart not found."
+            });
+        }
+
+        var item = cart.Items
+            .FirstOrDefault(i => i.Id == itemId);
+
+        if (item == null)
+        {
+            return NotFound(new
+            {
+                message = "Cart item not found."
+            });
+        }
+
+        _dbContext.CartItems.Remove(item);
+
+        cart.UpdatedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Cart item removed successfully."
+        });
+    }
+
 }
