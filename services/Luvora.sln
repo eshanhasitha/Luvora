@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryService.Tests", "I
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CartService.Test", "CartService.Test\CartService.Test.csproj", "{540EB84D-A4FA-41DD-A4B7-9ABA9F841835}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderService.Test", "OrderService.Test\OrderService.Test.csproj", "{8DC2947A-6591-4B27-BB43-5A77EDF780C6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -213,6 +215,18 @@ Global
 		{540EB84D-A4FA-41DD-A4B7-9ABA9F841835}.Release|x64.Build.0 = Release|Any CPU
 		{540EB84D-A4FA-41DD-A4B7-9ABA9F841835}.Release|x86.ActiveCfg = Release|Any CPU
 		{540EB84D-A4FA-41DD-A4B7-9ABA9F841835}.Release|x86.Build.0 = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|x64.Build.0 = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Debug|x86.Build.0 = Debug|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|x64.ActiveCfg = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|x64.Build.0 = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|x86.ActiveCfg = Release|Any CPU
+		{8DC2947A-6591-4B27-BB43-5A77EDF780C6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
