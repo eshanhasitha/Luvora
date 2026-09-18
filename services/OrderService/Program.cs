@@ -1,5 +1,5 @@
-using OrderService.Data;
 using Microsoft.EntityFrameworkCore;
+using OrderService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<OrderDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("OrderDatabase")
+        builder.Configuration.GetConnectionString(
+            "OrderDatabase")
     ));
 
 var app = builder.Build();
@@ -22,6 +23,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
