@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<CartDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("CartDatabase")
+        builder.Configuration.GetConnectionString(
+            "CartDatabase")
     ));
 
 var app = builder.Build();
@@ -22,6 +23,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
