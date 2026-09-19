@@ -103,4 +103,26 @@ public class PaymentController : ControllerBase
             CreatedAt = payment.CreatedAt
         };
     }
+
+    [HttpGet("order/{orderId:guid}")]
+    public async Task<IActionResult> GetPaymentByOrder(
+        Guid orderId)
+    {
+        var payment =
+            await _dbContext.Payments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    p => p.OrderId == orderId);
+
+        if (payment == null)
+        {
+            return NotFound(new
+            {
+                message =
+                    "Payment not found for this order."
+            });
+        }
+
+        return Ok(ToResponse(payment));
+    }
 }
