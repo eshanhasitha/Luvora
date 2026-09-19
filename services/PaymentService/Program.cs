@@ -1,5 +1,5 @@
-using PaymentService.Data;
 using Microsoft.EntityFrameworkCore;
+using PaymentService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("PaymentDatabase")
+        builder.Configuration.GetConnectionString(
+            "PaymentDatabase")
     ));
 
 var app = builder.Build();
@@ -22,6 +23,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
