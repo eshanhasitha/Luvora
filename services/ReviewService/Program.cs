@@ -1,5 +1,5 @@
-using ReviewService.Data;
 using Microsoft.EntityFrameworkCore;
+using ReviewService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<ReviewDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("ReviewDatabase")
+        builder.Configuration.GetConnectionString(
+            "ReviewDatabase")
     ));
 
 var app = builder.Build();
@@ -22,6 +23,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthorization();
 
 app.MapControllers();
 
