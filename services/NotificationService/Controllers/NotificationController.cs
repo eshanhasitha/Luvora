@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NotificationService.Data;
 using NotificationService.DTOs;
 using NotificationService.Models;
+using NotificationService.Templates;
 
 namespace NotificationService.Controllers;
 
@@ -122,4 +123,36 @@ public class NotificationController : ControllerBase
             unreadCount = count
         });
     }
+
+    [HttpPost("order-created")]
+    public async Task<IActionResult> CreateOrderCreatedNotification(
+        [FromQuery] Guid userId,
+        [FromQuery] string orderNumber)
+    {
+        var template =
+            NotificationTemplates.CreateOrderCreated(
+                orderNumber);
+
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Type = "ORDER_CREATED",
+            Title = template.Title,
+            Message = template.Message,
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Notifications.Add(notification);
+
+        await _dbContext.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { notificationId = notification.Id },
+            notification
+        );
+    }
+
 }
