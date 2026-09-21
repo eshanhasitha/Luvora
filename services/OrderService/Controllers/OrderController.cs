@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.DTOs;
 using OrderService.Models;
+using OrderService.Events;
+using OrderService.Application.Services;
 
 namespace OrderService.Controllers;
 
@@ -11,10 +13,14 @@ namespace OrderService.Controllers;
 public class OrderController : ControllerBase
 {
     private readonly OrderDbContext _dbContext;
+    private readonly EventPublisher _eventPublisher;
 
-    public OrderController(OrderDbContext dbContext)
+    public OrderController(
+        OrderDbContext dbContext,
+        EventPublisher eventPublisher)
     {
         _dbContext = dbContext;
+        _eventPublisher = eventPublisher;
     }
 
     [HttpPost]
@@ -67,6 +73,19 @@ public class OrderController : ControllerBase
         _dbContext.Orders.Add(order);
 
         await _dbContext.SaveChangesAsync();
+
+        var orderCreatedEvent = new OrderCreatedEvent
+        {
+            OrderId = order.Id,
+            UserId = order.UserId,
+            TotalAmount = order.TotalAmount,
+            CreatedAt = order.CreatedAt
+        };
+
+        await _eventPublisher.PublishAsync(
+            "order.created",
+            orderCreatedEvent,
+            HttpContext.RequestAborted);
 
         return CreatedAtAction(
             nameof(GetOrder),
