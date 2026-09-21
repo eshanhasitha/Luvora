@@ -1,5 +1,7 @@
 using InventoryService.Data;
 using Microsoft.EntityFrameworkCore;
+using InventoryService.Configuration;
+using InventoryService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,16 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+var rabbitMqSettings =
+    builder.Configuration
+        .GetSection("RabbitMq")
+        .Get<RabbitMqSettings>()
+    ?? new RabbitMqSettings();
+
+builder.Services.AddSingleton(rabbitMqSettings);
+
+builder.Services.AddHostedService<OrderCreatedConsumer>();
 
 builder.Services.AddDbContext<InventoryDbContext>(options =>
     options.UseNpgsql(
