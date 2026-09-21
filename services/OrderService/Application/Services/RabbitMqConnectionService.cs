@@ -1,7 +1,7 @@
 using OrderService.Configuration;
 using RabbitMQ.Client;
 
-namespace OrderService.Services;
+namespace OrderService.Application.Services;
 
 public class RabbitMqConnectionService
 {

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.Configuration;
-using OrderService.Services;
+using OrderService.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +28,9 @@ var rabbitMqSettings =
 builder.Services.AddSingleton(rabbitMqSettings);
 
 builder.Services.AddSingleton<RabbitMqConnectionService>();
+builder.Services.AddSingleton<EventPublisher>();
+
+
 
 var app = builder.Build();
 
