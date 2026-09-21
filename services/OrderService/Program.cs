@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
+using OrderService.Configuration;
+using OrderService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,19 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
         builder.Configuration.GetConnectionString(
             "OrderDatabase")
     ));
+
+builder.Services.Configure<RabbitMqSettings>(
+    builder.Configuration.GetSection("RabbitMq"));
+
+var rabbitMqSettings =
+    builder.Configuration
+        .GetSection("RabbitMq")
+        .Get<RabbitMqSettings>()
+    ?? new RabbitMqSettings();
+
+builder.Services.AddSingleton(rabbitMqSettings);
+
+builder.Services.AddSingleton<RabbitMqConnectionService>();
 
 var app = builder.Build();
 
