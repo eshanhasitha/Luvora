@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReviewService.Test", "Revie
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService.Test", "NotificationService.Test\NotificationService.Test.csproj", "{97B06943-FD63-4138-A498-30394945121D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Messaging.Test", "Messaging.Test\Messaging.Test.csproj", "{6BC288CD-0661-4941-8A52-8D920E69059A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -283,6 +285,18 @@ Global
 		{97B06943-FD63-4138-A498-30394945121D}.Release|x64.Build.0 = Release|Any CPU
 		{97B06943-FD63-4138-A498-30394945121D}.Release|x86.ActiveCfg = Release|Any CPU
 		{97B06943-FD63-4138-A498-30394945121D}.Release|x86.Build.0 = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|x64.Build.0 = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Debug|x86.Build.0 = Debug|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|x64.ActiveCfg = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|x64.Build.0 = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|x86.ActiveCfg = Release|Any CPU
+		{6BC288CD-0661-4941-8A52-8D920E69059A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
