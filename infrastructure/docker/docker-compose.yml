@@ -176,6 +176,10 @@ services:
       - review-service
     ports:
       - "5000:8080"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+
     networks:
       - luvora-network
 
