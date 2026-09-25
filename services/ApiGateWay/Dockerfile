@@ -2,14 +2,14 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
-COPY ApiGateway/ApiGateway.csproj ApiGateway/
-RUN dotnet restore ApiGateway/ApiGateway.csproj
+COPY ApiGateWay/ApiGateWay.csproj ApiGateWay/
+RUN dotnet restore ApiGateWay/ApiGateWay.csproj
 
 COPY . .
 
-WORKDIR /src/ApiGateway
+WORKDIR /src/ApiGateWay
 
-RUN dotnet publish ApiGateway.csproj \
+RUN dotnet publish ApiGateWay.csproj \
     -c Release \
     -o /app/publish \
     /p:UseAppHost=false
@@ -26,4 +26,4 @@ EXPOSE 8080
 
 ENV ASPNETCORE_URLS=http://+:8080
 
-ENTRYPOINT ["dotnet", "ApiGateway.dll"]
+ENTRYPOINT ["dotnet", "ApiGateWay.dll"]

@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - luvora-network
 
@@ -60,9 +61,14 @@ services:
     container_name: luvora-inventory
     depends_on:
       - postgres
+      - rabbitmq
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__InventoryDatabase: Host=postgres;Port=5432;Database=inventory_db;Username=luvora;Password=eshanfis511
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__Username: guest
+      RabbitMq__Password: guest
     networks:
       - luvora-network
 
@@ -185,7 +191,7 @@ services:
 
   frontend:
     build:
-      context: ../../frontend/Laravel
+      context: ../../../Luvora-Frontend/frontend
       dockerfile: Dockerfile
     container_name: luvora-frontend
     depends_on:
@@ -195,6 +201,7 @@ services:
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+      APP_KEY: base64:cEoJEAhp/uoXOQ+/IlZh7yUp5dbwYKutKm8M3PhINzs=
       LUVORA_API_URL: http://api-gateway:8080
     networks:
       - luvora-network
