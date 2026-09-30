@@ -35,6 +35,15 @@ spec:
             - name: LUVORA_API_URL
               value: "http://api-gateway:8080"
 
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: laravel-secret
+                  key: APP_KEY
+                  
+            - name: SESSION_DRIVER
+              value: "cookie"
+
           resources:
             requests:
               cpu: "100m"
