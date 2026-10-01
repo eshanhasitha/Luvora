@@ -31,6 +31,12 @@ spec:
             - name: ConnectionStrings__AuthDatabase
               value: "Host=postgres;Port=5432;Database=auth_db;Username=luvora;Password=eshanfis511"
 
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+
           resources:
             requests:
               cpu: "100m"
