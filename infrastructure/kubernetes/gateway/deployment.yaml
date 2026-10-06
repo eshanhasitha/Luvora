@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: luvora-api-gateway:1.0
+          image: luvora-api-gateway:k8s-20261006
 
           imagePullPolicy: IfNotPresent
 

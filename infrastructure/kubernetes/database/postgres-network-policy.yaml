@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-to-postgres
+  namespace: luvora
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+
+  policyTypes:
+    - Ingress
+
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+        - podSelector:
+            matchLabels:
+              app: product-service
+        - podSelector:
+            matchLabels:
+              app: inventory-service
+        - podSelector:
+            matchLabels:
+              app: cart-service
+        - podSelector:
+            matchLabels:
+              app: order-service
+        - podSelector:
+            matchLabels:
+              app: payment-service
+        - podSelector:
+            matchLabels:
+              app: delivery-service
+        - podSelector:
+            matchLabels:
+              app: notification-service
+        - podSelector:
+            matchLabels:
+              app: review-service
+      ports:
+        - protocol: TCP
+          port: 5432
