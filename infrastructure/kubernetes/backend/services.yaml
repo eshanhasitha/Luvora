@@ -29,7 +29,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__AuthDatabase
-              value: "Host=postgres;Port=5432;Database=auth_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__AuthDatabase
 
             - name: Jwt__Key
               valueFrom:
@@ -83,7 +86,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: luvora-product-service:latest
+          image: luvora-product-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -94,7 +97,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__ProductDatabase
-              value: "Host=postgres;Port=5432;Database=product_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__ProductDatabase
           resources:
             requests:
               cpu: "100m"
@@ -151,7 +157,27 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__InventoryDatabase
-              value: "Host=postgres;Port=5432;Database=inventory_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__InventoryDatabase
+            - name: RabbitMq__Host
+              value: rabbitmq
+
+            - name: RabbitMq__Port
+              value: "5672"
+
+            - name: RabbitMq__Username
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
+
+            - name: RabbitMq__Password
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASS
           resources:
             requests:
               cpu: "100m"
@@ -209,7 +235,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__CartDatabase
-              value: "Host=postgres;Port=5432;Database=cart_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__CartDatabase
           resources:
             requests:
               cpu: "100m"
@@ -266,8 +295,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__OrderDatabase
-              value: "Host=postgres;Port=5432;Database=order_db;Username=luvora;Password=eshanfis511"
-
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__OrderDatabase
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -275,10 +306,16 @@ spec:
               value: "5672"
 
             - name: RabbitMq__Username
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
 
             - name: RabbitMq__Password
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASS
 
           resources:
             requests:
@@ -337,8 +374,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__PaymentDatabase
-              value: "Host=postgres;Port=5432;Database=payment_db;Username=luvora;Password=eshanfis511"
-
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__PaymentDatabase
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -346,10 +385,16 @@ spec:
               value: "5672"
 
             - name: RabbitMq__Username
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
 
             - name: RabbitMq__Password
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASS
           resources:
             requests:
               cpu: "100m"
@@ -407,7 +452,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__DeliveryDatabase
-              value: "Host=postgres;Port=5432;Database=delivery_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__DeliveryDatabase
           resources:
             requests:
               cpu: "100m"
@@ -465,8 +513,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__NotificationDatabase
-              value: "Host=postgres;Port=5432;Database=notification_db;Username=luvora;Password=eshanfis511"
-
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__NotificationDatabase
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -474,10 +524,16 @@ spec:
               value: "5672"
 
             - name: RabbitMq__Username
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_USER
 
             - name: RabbitMq__Password
-              value: "guest"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_DEFAULT_PASS
           resources:
             requests:
               cpu: "100m"
@@ -535,7 +591,10 @@ spec:
               value: "Docker"
 
             - name: ConnectionStrings__ReviewDatabase
-              value: "Host=postgres;Port=5432;Database=review_db;Username=luvora;Password=eshanfis511"
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__ReviewDatabase
           resources:
             requests:
               cpu: "100m"

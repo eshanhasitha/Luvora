@@ -1,211 +1,380 @@
 services:
 
+  # ============================================================
+  # PostgreSQL
+  # ============================================================
+
   postgres:
     image: postgres:17
     container_name: luvora-postgres
+
     environment:
       POSTGRES_USER: luvora
       POSTGRES_PASSWORD: eshanfis511
+      POSTGRES_DB: postgres
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U luvora -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # RabbitMQ
+  # ============================================================
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: luvora-rabbitmq
+
     ports:
       - "5672:5672"
       - "15672:15672"
+
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: luvora
+      RABBITMQ_DEFAULT_PASS: luvora
+
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Auth Service
+  # ============================================================
 
   auth-service:
     build:
       context: ../../services
       dockerfile: AuthService/Dockerfile
+
     container_name: luvora-auth
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__AuthDatabase: Host=postgres;Port=5432;Database=auth_db;Username=luvora;Password=eshanfis511
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Product Service
+  # ============================================================
 
   product-service:
     build:
       context: ../../services
       dockerfile: ProductService/Dockerfile
+
     container_name: luvora-product
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ProductDatabase: Host=postgres;Port=5432;Database=product_db;Username=luvora;Password=eshanfis511
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Inventory Service
+  # ============================================================
 
   inventory-service:
     build:
       context: ../../services
       dockerfile: InventoryService/Dockerfile
+
     container_name: luvora-inventory
+
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__InventoryDatabase: Host=postgres;Port=5432;Database=inventory_db;Username=luvora;Password=eshanfis511
+
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
-      RabbitMq__Username: guest
-      RabbitMq__Password: guest
+      RabbitMq__Username: luvora
+      RabbitMq__Password: luvora
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Cart Service
+  # ============================================================
 
   cart-service:
     build:
       context: ../../services
       dockerfile: CartService/Dockerfile
+
     container_name: luvora-cart
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__CartDatabase: Host=postgres;Port=5432;Database=cart_db;Username=luvora;Password=eshanfis511
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Order Service
+  # ============================================================
 
   order-service:
     build:
       context: ../../services
       dockerfile: OrderService/Dockerfile
+
     container_name: luvora-order
+
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__OrderDatabase: Host=postgres;Port=5432;Database=order_db;Username=luvora;Password=eshanfis511
+
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
-      RabbitMq__Username: guest
-      RabbitMq__Password: guest
+      RabbitMq__Username: luvora
+      RabbitMq__Password: luvora
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Payment Service
+  # ============================================================
 
   payment-service:
     build:
       context: ../../services
       dockerfile: PaymentService/Dockerfile
+
     container_name: luvora-payment
+
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__PaymentDatabase: Host=postgres;Port=5432;Database=payment_db;Username=luvora;Password=eshanfis511
+
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
-      RabbitMq__Username: guest
-      RabbitMq__Password: guest
+      RabbitMq__Username: luvora
+      RabbitMq__Password: luvora
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Delivery Service
+  # ============================================================
 
   delivery-service:
     build:
       context: ../../services
       dockerfile: DeliveryService/Dockerfile
+
     container_name: luvora-delivery
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__DeliveryDatabase: Host=postgres;Port=5432;Database=delivery_db;Username=luvora;Password=eshanfis511
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Notification Service
+  # ============================================================
 
   notification-service:
     build:
       context: ../../services
       dockerfile: NotificationService/Dockerfile
+
     container_name: luvora-notification
+
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__NotificationDatabase: Host=postgres;Port=5432;Database=notification_db;Username=luvora;Password=eshanfis511
+
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
-      RabbitMq__Username: guest
-      RabbitMq__Password: guest
+      RabbitMq__Username: luvora
+      RabbitMq__Password: luvora
+
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Review Service
+  # ============================================================
 
   review-service:
     build:
       context: ../../services
       dockerfile: ReviewService/Dockerfile
+
     container_name: luvora-review
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+
       ConnectionStrings__ReviewDatabase: Host=postgres;Port=5432;Database=review_db;Username=luvora;Password=eshanfis511
+
     networks:
       - luvora-network
 
+
+  # ============================================================
+  # API Gateway - YARP
+  # ============================================================
+
   api-gateway:
-    build:
-      context: ../../services
-      dockerfile: ApiGateway/Dockerfile
-    container_name: luvora-gateway
+    image: luvora-api-gateway:1.0
+    container_name: luvora-api-gateway
+
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Docker
+
     depends_on:
-      - auth-service
-      - product-service
-      - inventory-service
-      - cart-service
-      - order-service
-      - payment-service
-      - delivery-service
-      - notification-service
-      - review-service
+      auth-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      delivery-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      review-service:
+        condition: service_started
+
     ports:
       - "5000:8080"
 
-    environment:
-      ASPNETCORE_ENVIRONMENT: Docker
-
     networks:
       - luvora-network
+
+
+  # ============================================================
+  # Laravel Frontend
+  # ============================================================
 
   frontend:
     build:
       context: ../../../Luvora-Frontend/frontend
       dockerfile: Dockerfile
+
     container_name: luvora-frontend
+
     depends_on:
       - api-gateway
+
     ports:
       - "8000:80"
+
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
+
+      # Keep your existing APP_KEY here locally.
       APP_KEY: base64:cEoJEAhp/uoXOQ+/IlZh7yUp5dbwYKutKm8M3PhINzs=
+
+      # IMPORTANT:
+      # Laravel container -> Docker network -> YARP
       LUVORA_API_URL: http://api-gateway:8080
+
     networks:
       - luvora-network
 
+
+# ================================================================
+# Volumes
+# ================================================================
 
 volumes:
 
@@ -215,6 +384,10 @@ volumes:
   rabbitmq_data:
     name: luvora-rabbitmq-data
 
+
+# ================================================================
+# Network
+# ================================================================
 
 networks:
 
