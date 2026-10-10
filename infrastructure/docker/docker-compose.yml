@@ -306,6 +306,10 @@ services:
   # ============================================================
 
   api-gateway:
+    build:
+      context: ../../services
+      dockerfile: ApiGateWay/Dockerfile
+
     image: luvora-api-gateway:1.0
     container_name: luvora-api-gateway
 
