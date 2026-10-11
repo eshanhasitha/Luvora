@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using ProductService.Data; 
 using ProductService.DTOs; 
 using ProductService.Models; 
+using Microsoft.AspNetCore.Authorization;
+using ProductService.Services;
+using Microsoft.Net.Http.Headers;
 
 namespace ProductService.Controllers; 
 [ApiController] 
@@ -11,12 +14,47 @@ namespace ProductService.Controllers;
 public class ProductsController : ControllerBase 
 { 
     private readonly ProductDbContext _dbContext; 
-    public ProductsController(ProductDbContext dbContext) 
+    private readonly ProductImageStorage _imageStorage;
+    public ProductsController(ProductDbContext dbContext, ProductImageStorage imageStorage) 
     { 
         _dbContext = dbContext; 
+        _imageStorage = imageStorage;
     } 
+
+    [HttpPost("images")]
+    [Authorize(Roles = "Staff,Admin")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> UploadImage(IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "Choose a non-empty image file." });
+
+        if (file.Length > 10_000_000)
+            return BadRequest(new { message = "Image must be 10 MB or smaller." });
+
+        try
+        {
+            var imagePath = await _imageStorage.SaveAsync(file, cancellationToken);
+            return Created(imagePath, new { imageUrl = imagePath });
+        }
+        catch (InvalidImageException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpGet("images/{fileName}")]
+    public async Task<IActionResult> GetImage(string fileName, CancellationToken cancellationToken)
+    {
+        if (!_imageStorage.TryGetPath(fileName, out var path))
+            return NotFound();
+
+        var contentType = ProductImageStorage.GetContentType(path);
+        return File(await System.IO.File.ReadAllBytesAsync(path, cancellationToken), contentType);
+    }
     
     // CREATE PRODUCT 
+    [Authorize(Roles = "Staff,Admin")]
     [HttpPost] 
     public async Task<IActionResult> Create( 
         CreateProductRequest request) 
@@ -164,7 +202,7 @@ public class ProductsController : ControllerBase
             pageSize, 
             totalItems, 
             totalPages = (int)Math.Ceiling( totalItems / (double)pageSize), 
-            items = result 
+            products = result 
         }); 
     } 
         
@@ -187,6 +225,31 @@ public class ProductsController : ControllerBase
         } 
         return Ok(ToResponse(product)); 
     } 
+
+    [HttpGet("slug/{slug}")]
+    public async Task<IActionResult> GetBySlug(string slug)
+    {
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .Include(p => p.Category)
+            .Include(p => p.Images)
+            .FirstOrDefaultAsync(p => p.IsActive && p.Slug == slug);
+
+        if (product == null)
+        {
+            return NotFound(new
+            {
+                message = "Product not found."
+            });
+        }
+
+        return Ok(ToResponse(product));
+    }
+
+    // Frontend contract: GET /api/products/{slug}. Route constraints keep
+    // GUID lookups and named product endpoints unambiguous.
+    [HttpGet("{slug:regex(^(?!images$|categories$|slug$).+)}")]
+    public Task<IActionResult> GetByFrontendSlug(string slug) => GetBySlug(slug);
     private static ProductResponse ToResponse(Product product) 
     { 
         return new ProductResponse 
@@ -222,6 +285,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost("categories")]
+    [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request)
     {
         if (!ModelState.IsValid)
@@ -268,6 +332,7 @@ public class ProductsController : ControllerBase
 
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> Update(Guid id, UpdateProductRequest request)
     {
         var product = await _dbContext.Products
@@ -373,6 +438,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")] 
+    [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> Delete(Guid id) 
     { 
         var product = await _dbContext.Products 

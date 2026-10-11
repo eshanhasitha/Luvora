@@ -100,6 +100,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__ProductDatabase: Host=postgres;Port=5432;Database=product_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      ImageStorage__Path: /app/storage/products
+
+    volumes:
+      - product_images:/app/storage/products
 
     networks:
       - luvora-network
@@ -296,6 +303,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__ReviewDatabase: Host=postgres;Port=5432;Database=review_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__ProductService: http://product-service:8080/
 
     networks:
       - luvora-network
@@ -387,6 +398,9 @@ volumes:
 
   rabbitmq_data:
     name: luvora-rabbitmq-data
+
+  product_images:
+    name: luvora-product-images
 
 
 # ================================================================

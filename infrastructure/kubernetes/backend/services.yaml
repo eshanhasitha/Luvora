@@ -40,6 +40,15 @@ spec:
                   name: luvora-app-secret
                   key: JWT_KEY
 
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+
+            - name: ImageStorage__Path
+              value: "/app/storage/products"
+
           resources:
             requests:
               cpu: "100m"
@@ -96,11 +105,24 @@ spec:
             - name: ASPNETCORE_ENVIRONMENT
               value: "Docker"
 
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+
             - name: ConnectionStrings__ProductDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__ProductDatabase
+
           resources:
             requests:
               cpu: "100m"
@@ -109,6 +131,14 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
+          volumeMounts:
+            - name: product-images
+              mountPath: /app/storage/products
+
+      volumes:
+        - name: product-images
+          persistentVolumeClaim:
+            claimName: product-images-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -595,6 +625,21 @@ spec:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__ReviewDatabase
+
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+
+            - name: Services__ProductService
+              value: "http://product-service:8080/"
           resources:
             requests:
               cpu: "100m"
