@@ -122,6 +122,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPut("{userId:guid}/items/{itemId:guid}")]
+    [HttpPatch("{userId:guid}/items/{itemId:guid}")]
     public async Task<IActionResult> UpdateItem(
         Guid userId,
         Guid itemId,

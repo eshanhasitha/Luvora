@@ -30,8 +30,9 @@ public class ReviewDbContext : DbContext
             entity.Property(r => r.ProductId)
                 .IsRequired();
 
-            entity.Property(r => r.OrderId)
-                .IsRequired();
+            entity.Property(r => r.OrderId);
+
+            entity.Property(r => r.Title).HasMaxLength(150).IsRequired();
 
             entity.Property(r => r.Rating)
                 .IsRequired();
@@ -56,6 +57,10 @@ public class ReviewDbContext : DbContext
                 r.OrderId
             })
             .IsUnique();
+
+            entity.HasIndex(r => new { r.UserId, r.ProductId })
+                .IsUnique()
+                .HasFilter("\"OrderId\" IS NULL");
 
             entity.HasIndex(r => r.ProductId);
         });

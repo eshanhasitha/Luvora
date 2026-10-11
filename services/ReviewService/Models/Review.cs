@@ -8,7 +8,9 @@ public class Review
 
     public Guid ProductId { get; set; }
 
-    public Guid OrderId { get; set; }
+    public Guid? OrderId { get; set; }
+
+    public string Title { get; set; } = string.Empty;
 
     public int Rating { get; set; }
 
