@@ -7,6 +7,7 @@ using AuthService.Services;
 using AuthService.DTOs;
 using AuthService.Constants;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace AuthService.Controllers;
 
@@ -235,6 +236,60 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             message = "Logged out successfully."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        ForgotPasswordRequest request)
+    {
+        return Ok(new
+        {
+            message = "If the account exists, password reset instructions have been sent."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public IActionResult ResetPassword(ResetPasswordRequest request)
+    {
+        return BadRequest(new
+        {
+            message = "Password reset tokens are not configured yet."
+        });
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdValue, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Id == userId);
+        if (user == null || !_passwordService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+        {
+            return BadRequest(new { message = "Current password is incorrect." });
+        }
+
+        user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { message = "Password changed successfully." });
+    }
+
+    [Authorize]
+    [HttpPost("resend-verification")]
+    public IActionResult ResendVerification()
+    {
+        return Accepted(new
+        {
+            message = "Verification email delivery is not configured yet."
         });
     }
 

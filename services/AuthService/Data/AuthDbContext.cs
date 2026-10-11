@@ -14,6 +14,10 @@ public class AuthDbContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
+
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -31,6 +35,8 @@ public class AuthDbContext : DbContext
             entity.Property(u => u.LastName)
                 .IsRequired()
                 .HasMaxLength(100);
+
+            entity.Property(u => u.PhoneNumber).HasMaxLength(40);
 
             entity.Property(u => u.Email)
                 .IsRequired()
@@ -51,6 +57,33 @@ public class AuthDbContext : DbContext
 
             entity.Property(u => u.UpdatedAt)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity<UserAddress>(entity =>
+        {
+            entity.ToTable("user_addresses");
+            entity.HasKey(address => address.Id);
+            entity.Property(address => address.Label).HasMaxLength(80).IsRequired();
+            entity.Property(address => address.RecipientName).HasMaxLength(200).IsRequired();
+            entity.Property(address => address.PhoneNumber).HasMaxLength(40).IsRequired();
+            entity.Property(address => address.AddressLine1).HasMaxLength(250).IsRequired();
+            entity.Property(address => address.AddressLine2).HasMaxLength(250);
+            entity.Property(address => address.City).HasMaxLength(120).IsRequired();
+            entity.Property(address => address.Region).HasMaxLength(120);
+            entity.Property(address => address.PostalCode).HasMaxLength(30);
+            entity.Property(address => address.Country).HasMaxLength(120).IsRequired();
+            entity.HasIndex(address => address.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(address => address.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserPreference>(entity =>
+        {
+            entity.ToTable("user_preferences");
+            entity.HasKey(preference => preference.UserId);
+            entity.Property(preference => preference.Language).HasMaxLength(20).IsRequired();
+            entity.Property(preference => preference.Currency).HasMaxLength(10).IsRequired();
+            entity.Property(preference => preference.Theme).HasMaxLength(20).IsRequired();
+            entity.HasOne<User>().WithOne().HasForeignKey<UserPreference>(preference => preference.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
