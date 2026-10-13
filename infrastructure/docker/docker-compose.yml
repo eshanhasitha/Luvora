@@ -361,7 +361,7 @@ services:
 
   frontend:
     build:
-      context: ../../../Luvora-Frontend/frontend
+      context: ../../../Luvora-Frontend/frontend/frontend
       dockerfile: Dockerfile
 
     container_name: luvora-frontend
@@ -385,7 +385,79 @@ services:
 
     networks:
       - luvora-network
+   
+  # ============================================================
+  # Laravel admin Frontend
+  # ============================================================
+  admin:
+    build:
+      context: ../../../Luvora-Frontend/frontend/admin
+      dockerfile: Dockerfile
+    ports:
+      - "8001:80"
 
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+      # Keep your existing APP_KEY here locally.
+      APP_KEY: base64:6cNXmwm+18JgT/U4+hWJGWrOTHEl9nXLJDR4//q/7J0=
+
+      # IMPORTANT:
+      # Laravel container -> Docker network -> YARP
+      LUVORA_API_URL: http://api-gateway:8080
+
+    networks:
+      - luvora-network
+
+
+  # ============================================================
+  # Laravel Staff Frontend
+  # ============================================================
+  staff:
+    build:
+      context: ../../../Luvora-Frontend/frontend/staff
+      dockerfile: Dockerfile
+    ports:
+      - "8002:80"
+
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+      # Keep your existing APP_KEY here locally.
+      APP_KEY: base64:DsFsVvS6TN7GxkHGQnQHjl4vSs62MqCgoQ0QpeJvDmI=
+
+      # IMPORTANT:
+      # Laravel container -> Docker network -> YARP
+      LUVORA_API_URL: http://api-gateway:8080
+
+    networks:
+      - luvora-network
+
+  # ============================================================
+  # Laravel Delivery Web Frontend
+  # ============================================================
+  delivery-web:
+    build:
+      context: ../../../Luvora-Frontend/frontend/delivery
+      dockerfile: Dockerfile
+    ports:
+      - "8003:80"
+
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+      # Keep your existing APP_KEY here locally.
+      APP_KEY: base64:Vf0ZQAJoKCQXEXO7inBHp2vw2+/+ecrQWacLoNTPJlA=
+
+      # IMPORTANT:
+      # Laravel container -> Docker network -> YARP
+      LUVORA_API_URL: http://api-gateway:8080
+
+    networks:
+      - luvora-network
 
 # ================================================================
 # Volumes
