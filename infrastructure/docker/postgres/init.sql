@@ -7,3 +7,8 @@ CREATE DATABASE payment_db;
 CREATE DATABASE delivery_db;
 CREATE DATABASE notification_db;
 CREATE DATABASE review_db;
+CREATE DATABASE promotion_db;
+CREATE DATABASE support_db;
+CREATE DATABASE reporting_db;
+CREATE DATABASE configuration_db;
+CREATE DATABASE audit_db;

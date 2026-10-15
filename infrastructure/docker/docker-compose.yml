@@ -29,6 +29,22 @@ services:
     networks:
       - luvora-network
 
+  database-bootstrap:
+    image: postgres:17
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: eshanfis511
+      PGUSER: luvora
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      for database in promotion_db support_db reporting_db configuration_db audit_db; do
+        psql -h postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$$database'" | grep -q 1 || createdb -h postgres "$$database";
+      done
+    networks:
+      - luvora-network
+
 
   # ============================================================
   # RabbitMQ
@@ -71,12 +87,17 @@ services:
     container_name: luvora-auth
 
     depends_on:
-      postgres:
-        condition: service_healthy
+      database-bootstrap:
+        condition: service_completed_successfully
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__AuthDatabase: Host=postgres;Port=5432;Database=auth_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
 
     networks:
       - luvora-network
@@ -311,6 +332,108 @@ services:
     networks:
       - luvora-network
 
+  promotion-service:
+    build:
+      context: ../../services
+      dockerfile: PromotionService/Dockerfile
+    container_name: luvora-promotion
+    depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__PromotionDatabase: Host=postgres;Port=5432;Database=promotion_db;Username=luvora;Password=eshanfis511
+    networks:
+      - luvora-network
+
+  support-service:
+    build:
+      context: ../../services
+      dockerfile: SupportService/Dockerfile
+    container_name: luvora-support
+    depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__SupportDatabase: Host=postgres;Port=5432;Database=support_db;Username=luvora;Password=eshanfis511
+    networks:
+      - luvora-network
+
+  reporting-service:
+    build:
+      context: ../../services
+      dockerfile: ReportingService/Dockerfile
+    container_name: luvora-reporting
+    depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
+      auth-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      delivery-service:
+        condition: service_started
+      promotion-service:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ReportingDatabase: Host=postgres;Port=5432;Database=reporting_db;Username=luvora;Password=eshanfis511
+      ServiceUrls__Auth: http://auth-service:8080/
+      ServiceUrls__Inventory: http://inventory-service:8080/
+      ServiceUrls__Order: http://order-service:8080/
+      ServiceUrls__Payment: http://payment-service:8080/
+      ServiceUrls__Delivery: http://delivery-service:8080/
+      ServiceUrls__Promotion: http://promotion-service:8080/
+    networks:
+      - luvora-network
+
+  configuration-service:
+    build:
+      context: ../../services
+      dockerfile: ConfigurationService/Dockerfile
+    container_name: luvora-configuration
+    depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__ConfigurationDatabase: Host=postgres;Port=5432;Database=configuration_db;Username=luvora;Password=eshanfis511
+    networks:
+      - luvora-network
+
+  audit-service:
+    build:
+      context: ../../services
+      dockerfile: AuditService/Dockerfile
+    container_name: luvora-audit
+    depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__AuditDatabase: Host=postgres;Port=5432;Database=audit_db;Username=luvora;Password=eshanfis511
+      Audit__IngestKey: ${AUDIT_INGEST_KEY:-dev-audit-ingest-key-change-in-production}
+      ServiceUrls__Auth: http://auth-service:8080/
+      ServiceUrls__Product: http://product-service:8080/
+      ServiceUrls__Inventory: http://inventory-service:8080/
+      ServiceUrls__Order: http://order-service:8080/
+      ServiceUrls__Payment: http://payment-service:8080/
+      ServiceUrls__Delivery: http://delivery-service:8080/
+      ServiceUrls__Promotion: http://promotion-service:8080/
+      ServiceUrls__Support: http://support-service:8080/
+      ServiceUrls__Reporting: http://reporting-service:8080/
+      ServiceUrls__Configuration: http://configuration-service:8080/
+      ServiceUrls__Audit: http://audit-service:8080/
+      ServiceUrls__Notification: http://notification-service:8080/
+      ServiceUrls__Review: http://review-service:8080/
+    networks:
+      - luvora-network
+
 
   # ============================================================
   # API Gateway - YARP
@@ -327,6 +450,11 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       ASPNETCORE_ENVIRONMENT: Docker
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Audit__BaseUrl: http://audit-service:8080/
+      Audit__IngestKey: ${AUDIT_INGEST_KEY:-dev-audit-ingest-key-change-in-production}
 
     depends_on:
       auth-service:
@@ -346,6 +474,16 @@ services:
       notification-service:
         condition: service_started
       review-service:
+        condition: service_started
+      promotion-service:
+        condition: service_started
+      support-service:
+        condition: service_started
+      reporting-service:
+        condition: service_started
+      configuration-service:
+        condition: service_started
+      audit-service:
         condition: service_started
 
     ports:
