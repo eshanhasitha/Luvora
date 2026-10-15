@@ -1,10 +1,12 @@
 using DeliveryService.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace DeliveryService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/delivery")]
 public sealed class AdminDeliveryController(DeliveryDbContext db) : ControllerBase
 {

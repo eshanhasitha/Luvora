@@ -3,10 +3,13 @@ using DeliveryService.DTOs;
 using DeliveryService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace DeliveryService.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/deliveries")]
 public class DeliveryController : ControllerBase
 {
@@ -22,6 +25,8 @@ public class DeliveryController : ControllerBase
     public async Task<IActionResult> CreateDelivery(
         CreateDeliveryRequest request)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
+        if (request.UserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
         var existingDelivery =
             await _dbContext.Deliveries
                 .FirstOrDefaultAsync(
@@ -64,11 +69,13 @@ public class DeliveryController : ControllerBase
     public async Task<IActionResult> GetDelivery(
         Guid deliveryId)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
+        var isAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
         var delivery =
             await _dbContext.Deliveries
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    d => d.Id == deliveryId);
+                    d => d.Id == deliveryId && (d.UserId == currentUserId || isAdmin));
 
         if (delivery == null)
         {
@@ -82,14 +89,17 @@ public class DeliveryController : ControllerBase
     }
 
     [HttpGet("order/{orderId:guid}")]
+    [HttpGet("/api/users/me/orders/{orderId:guid}/shipment")]
     public async Task<IActionResult> GetByOrder(
         Guid orderId)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
+        var isAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
         var delivery =
             await _dbContext.Deliveries
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    d => d.OrderId == orderId);
+                    d => d.OrderId == orderId && (d.UserId == currentUserId || isAdmin));
 
         if (delivery == null)
         {
@@ -103,11 +113,24 @@ public class DeliveryController : ControllerBase
         return Ok(ToResponse(delivery));
     }
 
+    [HttpGet("/api/users/me/orders/{orderId:guid}/tracking")]
+    public async Task<IActionResult> GetCustomerTracking(Guid orderId)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        var delivery = await _dbContext.Deliveries.AsNoTracking().SingleOrDefaultAsync(x => x.OrderId == orderId && x.UserId == userId);
+        if (delivery is null) return NotFound();
+        var events = new List<object> { new { status = "PENDING", occurredAt = delivery.CreatedAt } };
+        if (delivery.ShippedAt.HasValue) events.Add(new { status = "SHIPPED", occurredAt = delivery.ShippedAt.Value });
+        if (delivery.DeliveredAt.HasValue) events.Add(new { status = "DELIVERED", occurredAt = delivery.DeliveredAt.Value });
+        return Ok(new { delivery.OrderId, delivery.TrackingNumber, currentStatus = delivery.Status, events });
+    }
+
     [HttpPut("{deliveryId:guid}/status")]
     public async Task<IActionResult> UpdateStatus(
         Guid deliveryId,
         [FromQuery] string status)
     {
+        if (!User.IsInRole("Admin") && !User.IsInRole("Staff")) return Forbid();
         var delivery =
             await _dbContext.Deliveries
                 .FirstOrDefaultAsync(

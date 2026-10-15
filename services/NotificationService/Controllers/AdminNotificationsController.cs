@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using NotificationService.Data;
 
 namespace NotificationService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/notifications")]
 public sealed class AdminNotificationsController(NotificationDbContext db) : ControllerBase
 {
