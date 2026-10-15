@@ -244,20 +244,14 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ForgotPassword(
         ForgotPasswordRequest request)
     {
-        return Ok(new
-        {
-            message = "If the account exists, password reset instructions have been sent."
-        });
+        return Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Password reset delivery is not configured.");
     }
 
     [AllowAnonymous]
     [HttpPost("reset-password")]
     public IActionResult ResetPassword(ResetPasswordRequest request)
     {
-        return BadRequest(new
-        {
-            message = "Password reset tokens are not configured yet."
-        });
+        return Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Password reset tokens are not configured.");
     }
 
     [Authorize]
@@ -287,10 +281,7 @@ public class AuthController : ControllerBase
     [HttpPost("resend-verification")]
     public IActionResult ResendVerification()
     {
-        return Accepted(new
-        {
-            message = "Verification email delivery is not configured yet."
-        });
+        return Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Verification email delivery is not configured.");
     }
 
     [Authorize(Roles = Roles.Admin)]

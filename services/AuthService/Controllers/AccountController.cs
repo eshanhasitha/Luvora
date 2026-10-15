@@ -17,6 +17,7 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     private Guid CurrentUserId => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet("profile")]
+    [HttpGet("/api/users/me")]
     public async Task<IActionResult> GetProfile()
     {
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == CurrentUserId);
@@ -25,6 +26,7 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpPut("profile")]
+    [HttpPatch("/api/users/me")]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
     {
         var user = await db.Users.FirstOrDefaultAsync(x => x.Id == CurrentUserId);
@@ -38,10 +40,12 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpGet("addresses")]
+    [HttpGet("/api/users/me/addresses")]
     public async Task<IActionResult> GetAddresses() => Ok(await db.UserAddresses.AsNoTracking()
         .Where(x => x.UserId == CurrentUserId).OrderByDescending(x => x.IsDefault).ThenBy(x => x.CreatedAt).ToListAsync());
 
     [HttpPost("addresses")]
+    [HttpPost("/api/users/me/addresses")]
     public async Task<IActionResult> CreateAddress(AddressRequest request)
     {
         var userId = CurrentUserId;
@@ -56,6 +60,7 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpPut("addresses/{addressId:guid}")]
+    [HttpPut("/api/users/me/addresses/{addressId:guid}")]
     public async Task<IActionResult> UpdateAddress(Guid addressId, AddressRequest request)
     {
         var userId = CurrentUserId;
@@ -72,7 +77,21 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
         return Ok(address);
     }
 
+    [HttpPatch("/api/users/me/addresses/{addressId:guid}/default")]
+    public async Task<IActionResult> SetDefaultAddress(Guid addressId)
+    {
+        var userId = CurrentUserId;
+        var address = await db.UserAddresses.SingleOrDefaultAsync(x => x.Id == addressId && x.UserId == userId);
+        if (address is null) return NotFound();
+        await ClearDefaultAddress(userId);
+        address.IsDefault = true;
+        address.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(new { address.Id, address.IsDefault, address.UpdatedAt });
+    }
+
     [HttpDelete("addresses/{addressId:guid}")]
+    [HttpDelete("/api/users/me/addresses/{addressId:guid}")]
     public async Task<IActionResult> DeleteAddress(Guid addressId)
     {
         var address = await db.UserAddresses.FirstOrDefaultAsync(x => x.Id == addressId && x.UserId == CurrentUserId);
@@ -89,6 +108,8 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpGet("preferences")]
+    [HttpGet("/api/users/me/preferences")]
+    [HttpGet("/api/users/me/notifications/preferences")]
     public async Task<IActionResult> GetPreferences()
     {
         var userId = CurrentUserId;
@@ -103,6 +124,8 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpPut("preferences")]
+    [HttpPut("/api/users/me/preferences")]
+    [HttpPut("/api/users/me/notifications/preferences")]
     public async Task<IActionResult> UpdatePreferences(UpdatePreferencesRequest request)
     {
         var userId = CurrentUserId;
@@ -124,6 +147,7 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     }
 
     [HttpDelete]
+    [HttpPost("/api/users/me/account-deletion")]
     public async Task<IActionResult> DeleteAccount(DeleteAccountRequest request)
     {
         if (!request.Confirm) return BadRequest(new { message = "Explicit account deletion confirmation is required." });
@@ -137,6 +161,50 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
         await db.SaveChangesAsync();
         return Ok(new { message = "Account deactivated successfully." });
     }
+
+    [HttpGet("/api/users/me/wishlist")]
+    public async Task<IActionResult> GetWishlist()
+    {
+        var items = await db.WishlistItems.AsNoTracking().Where(x => x.UserId == CurrentUserId).OrderByDescending(x => x.CreatedAt).ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpPost("/api/users/me/wishlist/items")]
+    public async Task<IActionResult> AddWishlistItem(WishlistRequest request)
+    {
+        if (request.ProductId == Guid.Empty) return BadRequest(new { message = "A product ID is required." });
+        var userId = CurrentUserId;
+        if (await db.WishlistItems.AnyAsync(x => x.UserId == userId && x.ProductId == request.ProductId)) return Conflict(new { message = "Product is already in the wishlist." });
+        var item = new WishlistItem { Id = Guid.NewGuid(), UserId = userId, ProductId = request.ProductId, CreatedAt = DateTime.UtcNow };
+        db.WishlistItems.Add(item); await db.SaveChangesAsync(); return Created($"/api/users/me/wishlist/items/{item.ProductId}", item);
+    }
+
+    [HttpDelete("/api/users/me/wishlist/items/{productId:guid}")]
+    public async Task<IActionResult> RemoveWishlistItem(Guid productId)
+    {
+        var item = await db.WishlistItems.SingleOrDefaultAsync(x => x.UserId == CurrentUserId && x.ProductId == productId);
+        if (item is null) return NotFound();
+        db.WishlistItems.Remove(item); await db.SaveChangesAsync(); return NoContent();
+    }
+
+    [HttpDelete("/api/users/me/wishlist/items")]
+    public async Task<IActionResult> ClearWishlist()
+    {
+        var items = await db.WishlistItems.Where(x => x.UserId == CurrentUserId).ToListAsync();
+        db.WishlistItems.RemoveRange(items); await db.SaveChangesAsync(); return NoContent();
+    }
+
+    [HttpGet("/api/users/me/wishlist/items/{productId:guid}")]
+    public async Task<IActionResult> IsInWishlist(Guid productId) => Ok(new { productId, saved = await db.WishlistItems.AnyAsync(x => x.UserId == CurrentUserId && x.ProductId == productId) });
+
+    [HttpPost("/api/users/me/data-export")]
+    [HttpPost("/api/users/me/privacy/data-export")]
+    public IActionResult RequestDataExport() => Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Personal data export is not configured.");
+
+    [HttpGet("/api/users/me/privacy")]
+    public IActionResult Privacy() => Ok(new { accountDeletion = true, dataExport = false, retentionPolicy = "Contact support for data requests." });
+
+    public sealed record WishlistRequest(Guid ProductId);
 
     private async Task ClearDefaultAddress(Guid userId)
     {

@@ -17,6 +17,7 @@ public class AuthDbContext : DbContext
     public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
 
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,6 +85,15 @@ public class AuthDbContext : DbContext
             entity.Property(preference => preference.Currency).HasMaxLength(10).IsRequired();
             entity.Property(preference => preference.Theme).HasMaxLength(20).IsRequired();
             entity.HasOne<User>().WithOne().HasForeignKey<UserPreference>(preference => preference.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WishlistItem>(entity =>
+        {
+            entity.ToTable("wishlist_items");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.ProductId }).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
