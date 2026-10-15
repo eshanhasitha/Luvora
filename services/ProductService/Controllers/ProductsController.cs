@@ -6,6 +6,7 @@ using ProductService.Models;
 using Microsoft.AspNetCore.Authorization;
 using ProductService.Services;
 using Microsoft.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace ProductService.Controllers; 
 [ApiController] 
@@ -15,10 +16,12 @@ public class ProductsController : ControllerBase
 { 
     private readonly ProductDbContext _dbContext; 
     private readonly ProductImageStorage _imageStorage;
-    public ProductsController(ProductDbContext dbContext, ProductImageStorage imageStorage) 
+    private readonly IHttpClientFactory _clients;
+    public ProductsController(ProductDbContext dbContext, ProductImageStorage imageStorage, IHttpClientFactory clients)
     { 
         _dbContext = dbContext; 
         _imageStorage = imageStorage;
+        _clients = clients;
     } 
 
     [HttpPost("images")]
@@ -210,11 +213,12 @@ public class ProductsController : ControllerBase
     [HttpGet("{id:guid}")] 
     public async Task<IActionResult> GetById(Guid id) 
     { 
+        var canViewInactive = User.IsInRole("Admin") || User.IsInRole("Staff");
         var product = await _dbContext.Products 
             .AsNoTracking() 
             .Include(p => p.Category) 
             .Include(p => p.Images) 
-            .FirstOrDefaultAsync(p => p.Id == id); 
+            .FirstOrDefaultAsync(p => p.Id == id && (p.IsActive || canViewInactive));
             
         if (product == null) 
         { 
@@ -244,6 +248,42 @@ public class ProductsController : ControllerBase
         }
 
         return Ok(ToResponse(product));
+    }
+
+    [HttpGet("{id:guid}/availability")]
+    public async Task<IActionResult> Availability(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.Products.AsNoTracking().AnyAsync(x => x.Id == id && x.IsActive, cancellationToken);
+        if (!exists) return NotFound();
+        try
+        {
+            var availability = await _clients.CreateClient("inventory").GetFromJsonAsync<AvailabilityResponse>($"api/inventory/{id}/availability", cancellationToken);
+            return availability is null ? Problem(statusCode: 503, title: "Inventory availability is unavailable.") : Ok(availability);
+        }
+        catch (HttpRequestException) { return Problem(statusCode: 503, title: "Inventory availability is unavailable."); }
+        catch (TaskCanceledException) { return Problem(statusCode: 503, title: "Inventory availability is unavailable."); }
+    }
+
+    private sealed class AvailabilityResponse { public Guid ProductId { get; set; } public bool Available { get; set; } public int AvailableQuantity { get; set; } }
+
+    [HttpGet("/api/categories")]
+    public async Task<IActionResult> PublicCategories() => Ok(await _dbContext.Categories.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).Select(x => new { x.Id, x.Name, x.Slug, x.Description }).ToListAsync());
+
+    [HttpGet("/api/categories/{categoryId:guid}")]
+    public async Task<IActionResult> PublicCategory(Guid categoryId)
+    {
+        var item = await _dbContext.Categories.AsNoTracking().Where(x => x.Id == categoryId && x.IsActive).Select(x => new { x.Id, x.Name, x.Slug, x.Description }).SingleOrDefaultAsync();
+        return item is null ? NotFound() : Ok(item);
+    }
+
+    [HttpGet("/api/categories/{categoryId:guid}/products")]
+    public async Task<IActionResult> PublicCategoryProducts(Guid categoryId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 100);
+        if (!await _dbContext.Categories.AnyAsync(x => x.Id == categoryId && x.IsActive)) return NotFound();
+        var query = _dbContext.Products.AsNoTracking().Where(x => x.CategoryId == categoryId && x.IsActive);
+        var total = await query.CountAsync();
+        return Ok(new { page, pageSize, totalItems = total, products = await query.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize).Select(x => new { x.Id, x.Name, x.Slug, x.Price, x.DiscountPrice, x.Brand }).ToListAsync() });
     }
 
     // Frontend contract: GET /api/products/{slug}. Route constraints keep

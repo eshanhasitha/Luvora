@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ReviewService.Data;
 
 namespace ReviewService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/reviews")]
 public sealed class AdminReviewsController(ReviewDbContext db) : ControllerBase
 {
@@ -47,5 +49,36 @@ public sealed class AdminReviewsController(ReviewDbContext db) : ControllerBase
         return Ok(new { review.Id, status, review.UpdatedAt });
     }
 
+    [HttpPost("{reviewId:guid}/reply")]
+    public async Task<IActionResult> Reply(Guid reviewId, ReplyRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Message)) return BadRequest(new { message = "Reply is required." });
+        var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == reviewId);
+        if (review is null) return NotFound();
+        review.AdminReply = request.Message.Trim(); review.AdminReplyAt = DateTime.UtcNow; review.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(); return Ok(new { review.Id, review.AdminReply, review.AdminReplyAt });
+    }
+
+    [HttpGet("reported")]
+    public async Task<IActionResult> Reported([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = db.ReviewReports.AsNoTracking().Where(x => x.Status == "Open");
+        var total = await query.CountAsync();
+        return Ok(new { totalItems = total, reports = await query.OrderByDescending(x => x.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync() });
+    }
+
+    [HttpPost("{reviewId:guid}/resolve-report")]
+    public async Task<IActionResult> ResolveReports(Guid reviewId, ResolveReportRequest request)
+    {
+        if (request.Resolution is not ("Resolved" or "Rejected")) return BadRequest(new { message = "Resolution must be Resolved or Rejected." });
+        var reports = await db.ReviewReports.Where(x => x.ReviewId == reviewId && x.Status == "Open").ToListAsync();
+        if (reports.Count == 0) return NotFound();
+        foreach (var report in reports) { report.Status = request.Resolution; report.ResolvedAt = DateTime.UtcNow; }
+        await db.SaveChangesAsync(); return Ok(new { reviewId, resolvedCount = reports.Count, status = request.Resolution });
+    }
+
     public sealed record StatusRequest(string Status);
+    public sealed record ReplyRequest(string Message);
+    public sealed record ResolveReportRequest(string Resolution);
 }

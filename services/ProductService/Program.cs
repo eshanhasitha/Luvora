@@ -19,6 +19,8 @@ var imageStoragePath = builder.Configuration["ImageStorage:Path"]
     ?? Path.Combine(builder.Environment.ContentRootPath, "uploads", "products");
 Directory.CreateDirectory(imageStoragePath);
 builder.Services.AddSingleton(new ProductService.Services.ProductImageStorage(imageStoragePath));
+var inventoryServiceUrl = builder.Configuration["Services:InventoryService"] ?? "http://localhost:5044/";
+builder.Services.AddHttpClient("inventory", client => client.BaseAddress = new Uri(inventoryServiceUrl));
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT key is not configured.");

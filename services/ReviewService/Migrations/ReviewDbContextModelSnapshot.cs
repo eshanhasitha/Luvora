@@ -28,6 +28,12 @@ namespace ReviewService.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AdminReply")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("AdminReplyAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Comment")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -71,6 +77,41 @@ namespace ReviewService.Migrations
                         .IsUnique();
 
                     b.ToTable("reviews", (string)null);
+                });
+
+            modelBuilder.Entity("ReviewService.Models.ReviewReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId", "Status");
+
+                    b.ToTable("review_reports", (string)null);
                 });
 #pragma warning restore 612, 618
         }

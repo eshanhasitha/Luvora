@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PromotionService.Data;
 using PromotionService.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PromotionService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/promotions")]
 public sealed class AdminPromotionsController(PromotionDbContext db) : ControllerBase
 {
@@ -180,6 +182,14 @@ public sealed class AdminPromotionsController(PromotionDbContext db) : Controlle
         if (string.IsNullOrWhiteSpace(request.Title) || request.StartsAt.HasValue && request.EndsAt.HasValue && request.EndsAt <= request.StartsAt) return BadRequest(new { message = "Banner title and a valid date range are required." });
         var item = new Banner { Id = Guid.NewGuid(), Title = request.Title.Trim(), ImageUrl = request.ImageUrl, TargetUrl = request.TargetUrl, DisplayOrder = await db.Banners.CountAsync(), StartsAt = request.StartsAt, EndsAt = request.EndsAt, IsActive = request.IsActive, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         db.Banners.Add(item); await db.SaveChangesAsync(); return Created($"/api/admin/promotions/banners/{item.Id}", item);
+    }
+
+    [HttpGet("/api/storefront/banners")]
+    [AllowAnonymous]
+    public async Task<IActionResult> StorefrontBanners()
+    {
+        var now = DateTime.UtcNow;
+        return Ok(await db.Banners.AsNoTracking().Where(x => x.IsActive && (x.StartsAt == null || x.StartsAt <= now) && (x.EndsAt == null || x.EndsAt >= now)).OrderBy(x => x.DisplayOrder).Select(x => new { x.Id, x.Title, x.ImageUrl, x.TargetUrl, x.DisplayOrder }).ToListAsync());
     }
 
     [HttpPut("banners/{bannerId:guid}")]

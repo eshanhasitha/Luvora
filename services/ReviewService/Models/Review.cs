@@ -16,6 +16,10 @@ public class Review
 
     public string Comment { get; set; } = string.Empty;
 
+    public string? AdminReply { get; set; }
+
+    public DateTime? AdminReplyAt { get; set; }
+
     public bool IsApproved { get; set; } = true;
 
     public DateTime CreatedAt { get; set; }

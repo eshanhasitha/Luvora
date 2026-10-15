@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SupportService.Data;
 using SupportService.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SupportService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin,Staff")]
 [Route("api/admin/support")]
 public sealed class AdminSupportController(SupportDbContext db) : ControllerBase
 {

@@ -12,6 +12,7 @@ public class ReviewDbContext : DbContext
     }
 
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ReviewReport> ReviewReports => Set<ReviewReport>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -63,6 +64,15 @@ public class ReviewDbContext : DbContext
                 .HasFilter("\"OrderId\" IS NULL");
 
             entity.HasIndex(r => r.ProductId);
+        });
+
+        modelBuilder.Entity<ReviewReport>(entity =>
+        {
+            entity.ToTable("review_reports");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+            entity.HasIndex(x => new { x.ReviewId, x.Status });
         });
     }
 }

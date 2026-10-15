@@ -18,5 +18,7 @@ public class ReviewResponse
 
     public bool IsApproved { get; set; }
 
+    public string? AdminReply { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }
