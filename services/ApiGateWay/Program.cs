@@ -26,8 +26,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         RoleClaimType = ClaimTypes.Role,
         ClockSkew = TimeSpan.FromSeconds(30)
     });
-builder.Services.AddAuthorization(options => options.AddPolicy("AdminOnly", policy =>
-    policy.RequireAuthenticatedUser().RequireRole("Admin")));
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy("Authenticated", policy => policy.RequireAuthenticatedUser());
+});
 builder.Services.AddHttpClient("audit", client => client.Timeout = TimeSpan.FromSeconds(2));
 
 builder.Services

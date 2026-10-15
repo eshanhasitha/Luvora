@@ -34,6 +34,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      product-service:
+        condition: service_started
     environment:
       PGPASSWORD: eshanfis511
       PGUSER: luvora
@@ -125,6 +127,7 @@ services:
       Jwt__Issuer: Luvora.AuthService
       Jwt__Audience: Luvora.Client
       ImageStorage__Path: /app/storage/products
+      Services__InventoryService: http://inventory-service:8080/
 
     volumes:
       - product_images:/app/storage/products
@@ -149,11 +152,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      product-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__InventoryDatabase: Host=postgres;Port=5432;Database=inventory_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
 
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
@@ -178,11 +186,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      product-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__CartDatabase: Host=postgres;Port=5432;Database=cart_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__ProductService: http://product-service:8080/
 
     networks:
       - luvora-network
@@ -204,11 +218,17 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      product-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__OrderDatabase: Host=postgres;Port=5432;Database=order_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__ProductService: http://product-service:8080/
 
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
@@ -235,11 +255,17 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      order-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__PaymentDatabase: Host=postgres;Port=5432;Database=payment_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__OrderService: http://order-service:8080/
 
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
@@ -269,6 +295,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__DeliveryDatabase: Host=postgres;Port=5432;Database=delivery_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
 
     networks:
       - luvora-network
@@ -295,6 +324,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
 
       ConnectionStrings__NotificationDatabase: Host=postgres;Port=5432;Database=notification_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__OrderService: http://order-service:8080/
 
       RabbitMq__Host: rabbitmq
       RabbitMq__Port: 5672
@@ -340,9 +373,15 @@ services:
     depends_on:
       database-bootstrap:
         condition: service_completed_successfully
+      cart-service:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PromotionDatabase: Host=postgres;Port=5432;Database=promotion_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
+      Services__CartService: http://cart-service:8080/
     networks:
       - luvora-network
 
@@ -357,6 +396,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__SupportDatabase: Host=postgres;Port=5432;Database=support_db;Username=luvora;Password=eshanfis511
+      Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
+      Jwt__Issuer: Luvora.AuthService
+      Jwt__Audience: Luvora.Client
     networks:
       - luvora-network
 
