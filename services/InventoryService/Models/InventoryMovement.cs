@@ -5,6 +5,7 @@ public sealed class InventoryMovement
     public Guid Id { get; set; }
     public Guid InventoryId { get; set; }
     public Guid ProductId { get; set; }
+    public Guid? ActorUserId { get; set; }
     public int QuantityDelta { get; set; }
     public int QuantityBefore { get; set; }
     public int QuantityAfter { get; set; }

@@ -1,11 +1,14 @@
 using InventoryService.Data;
 using InventoryService.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/inventory")]
 public sealed class AdminInventoryController(InventoryDbContext db) : ControllerBase
 {
@@ -48,7 +51,8 @@ public sealed class AdminInventoryController(InventoryDbContext db) : Controller
         var before = inventory.AvailableQuantity;
         inventory.AvailableQuantity = after;
         inventory.UpdatedAt = DateTime.UtcNow;
-        var movement = new InventoryMovement { Id = Guid.NewGuid(), InventoryId = inventory.Id, ProductId = inventory.ProductId, QuantityDelta = request.QuantityDelta, QuantityBefore = before, QuantityAfter = after, Reason = request.Reason.Trim(), Reference = request.Reference?.Trim(), CreatedAt = DateTime.UtcNow };
+        Guid? actorUserId = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actor) ? actor : null;
+        var movement = new InventoryMovement { Id = Guid.NewGuid(), InventoryId = inventory.Id, ProductId = inventory.ProductId, ActorUserId = actorUserId, QuantityDelta = request.QuantityDelta, QuantityBefore = before, QuantityAfter = after, Reason = request.Reason.Trim(), Reference = request.Reference?.Trim(), CreatedAt = DateTime.UtcNow };
         db.Movements.Add(movement);
         await db.SaveChangesAsync();
         return CreatedAtAction(nameof(Movements), new { productId = request.ProductId }, movement);

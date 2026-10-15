@@ -3,25 +3,40 @@ using Microsoft.EntityFrameworkCore;
 using PaymentService.Data;
 using PaymentService.DTOs;
 using PaymentService.Models;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using System.Net.Http.Json;
 
 namespace PaymentService.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/payments")]
 public class PaymentController : ControllerBase
 {
     private readonly PaymentDbContext _dbContext;
 
-    public PaymentController(
-        PaymentDbContext dbContext)
+    private readonly IHttpClientFactory _clients;
+
+    public PaymentController(PaymentDbContext dbContext, IHttpClientFactory clients)
     {
         _dbContext = dbContext;
+        _clients = clients;
     }
 
     [HttpPost]
     public async Task<IActionResult> CreatePayment(
         CreatePaymentRequest request)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
+        var orders = _clients.CreateClient("orders");
+        var authorization = Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authorization)) orders.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authorization);
+        OrderSummary? order;
+        try { order = await orders.GetFromJsonAsync<OrderSummary>($"api/users/me/orders/{request.OrderId}", HttpContext.RequestAborted); }
+        catch (HttpRequestException) { return Problem(statusCode: 503, title: "Order service is unavailable."); }
+        if (order is null || order.UserId != currentUserId) return NotFound(new { message = "Order not found." });
+        if (order.Status is "CANCELLED" or "COMPLETED") return Conflict(new { message = "Order is not eligible for payment." });
         var existingPayment =
             await _dbContext.Payments
                 .FirstOrDefaultAsync(
@@ -40,8 +55,8 @@ public class PaymentController : ControllerBase
         {
             Id = Guid.NewGuid(),
             OrderId = request.OrderId,
-            UserId = request.UserId,
-            Amount = request.Amount,
+            UserId = currentUserId,
+            Amount = order.TotalAmount,
             PaymentMethod = request.PaymentMethod,
             Status = "PENDING",
             TransactionId =
@@ -54,12 +69,6 @@ public class PaymentController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
 
-        // Mock payment processing.
-        payment.Status = "COMPLETED";
-        payment.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
         return CreatedAtAction(
             nameof(GetPayment),
             new { paymentId = payment.Id },
@@ -67,15 +76,18 @@ public class PaymentController : ControllerBase
         );
     }
 
+    public sealed class OrderSummary { public Guid UserId { get; set; } public decimal TotalAmount { get; set; } public string Status { get; set; } = string.Empty; }
+
     [HttpGet("{paymentId:guid}")]
     public async Task<IActionResult> GetPayment(
         Guid paymentId)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
         var payment =
             await _dbContext.Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    p => p.Id == paymentId);
+                    p => p.Id == paymentId && p.UserId == currentUserId);
 
         if (payment == null)
         {
@@ -105,14 +117,16 @@ public class PaymentController : ControllerBase
     }
 
     [HttpGet("order/{orderId:guid}")]
+    [HttpGet("orders/{orderId:guid}/transactions")]
     public async Task<IActionResult> GetPaymentByOrder(
         Guid orderId)
     {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
         var payment =
             await _dbContext.Payments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    p => p.OrderId == orderId);
+                    p => p.OrderId == orderId && p.UserId == currentUserId);
 
         if (payment == null)
         {

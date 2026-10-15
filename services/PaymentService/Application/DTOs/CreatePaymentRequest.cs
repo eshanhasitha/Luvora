@@ -10,7 +10,7 @@ public class CreatePaymentRequest
     [Required]
     public Guid UserId { get; set; }
 
-    [Range(0.01, double.MaxValue)]
+    // Ignored by PaymentService; the amount is loaded from the authenticated customer's order.
     public decimal Amount { get; set; }
 
     [Required]

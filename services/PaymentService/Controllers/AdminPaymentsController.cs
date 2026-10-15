@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Data;
 
 namespace PaymentService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/payments")]
 public sealed class AdminPaymentsController(PaymentDbContext db) : ControllerBase
 {

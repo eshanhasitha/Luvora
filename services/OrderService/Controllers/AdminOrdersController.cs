@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 
 namespace OrderService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/orders")]
 public sealed class AdminOrdersController(OrderDbContext db) : ControllerBase
 {

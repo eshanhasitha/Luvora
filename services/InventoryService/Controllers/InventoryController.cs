@@ -3,10 +3,12 @@ using InventoryService.DTOs;
 using InventoryService.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace InventoryService.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/inventory")]
 public class InventoryController : ControllerBase
 {
@@ -19,6 +21,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> Create(
         CreateInventoryRequest request)
     {
@@ -59,6 +62,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("{productId:guid}")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> GetByProductId(
         Guid productId)
     {
@@ -76,6 +80,15 @@ public class InventoryController : ControllerBase
         }
 
         return Ok(ToResponse(inventory));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{productId:guid}/availability")]
+    public async Task<IActionResult> Availability(Guid productId)
+    {
+        var inventory = await _dbContext.Inventories.AsNoTracking().FirstOrDefaultAsync(x => x.ProductId == productId && x.IsActive);
+        return inventory is null ? Ok(new { productId, available = false, availableQuantity = 0 })
+            : Ok(new { productId, available = inventory.AvailableQuantity > 0, availableQuantity = inventory.AvailableQuantity });
     }
 
     private static InventoryResponse ToResponse(
@@ -99,6 +112,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("reserve")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> ReserveStock(
         ReserveStockRequest request)
     {
@@ -144,6 +158,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("release")]
+    [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> ReleaseStock(
         ReleaseStockRequest request)
     {
@@ -178,36 +193,11 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPut("{productId:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(
         Guid productId,
         UpdateInventoryRequest request)
     {
-        var inventory = await _dbContext.Inventories
-            .FirstOrDefaultAsync(
-                i => i.ProductId == productId);
-
-        if (inventory == null)
-        {
-            return NotFound(new
-            {
-                message = "Inventory not found."
-            });
-        }
-
-        inventory.AvailableQuantity =
-            request.AvailableQuantity;
-
-        inventory.ReorderLevel =
-            request.ReorderLevel;
-
-        inventory.IsActive =
-            request.IsActive;
-
-        inventory.UpdatedAt =
-            DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return Ok(ToResponse(inventory));
+        return Conflict(new { message = "Direct stock quantity writes are disabled. Use the auditable admin adjustment endpoint." });
     }
 }
