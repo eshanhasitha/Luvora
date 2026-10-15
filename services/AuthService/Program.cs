@@ -1,6 +1,8 @@
 using Serilog;
 using AuthService.Data;
 using AuthService.Services;
+using AuthService.Models;
+using AuthService.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -69,6 +71,29 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     await db.Database.MigrateAsync();
+
+    var bootstrapEmail = builder.Configuration["BootstrapAdmin:Email"]?.Trim().ToLowerInvariant();
+    var bootstrapPassword = builder.Configuration["BootstrapAdmin:Password"];
+    if (!string.IsNullOrWhiteSpace(bootstrapEmail) || !string.IsNullOrWhiteSpace(bootstrapPassword))
+    {
+        if (string.IsNullOrWhiteSpace(bootstrapEmail) || string.IsNullOrWhiteSpace(bootstrapPassword) || bootstrapPassword.Length < 12)
+            throw new InvalidOperationException("Bootstrap admin requires both an email and a password of at least 12 characters.");
+
+        if (!await db.Users.AnyAsync(x => x.Role == Roles.Admin))
+        {
+            if (await db.Users.AnyAsync(x => x.Email == bootstrapEmail))
+                throw new InvalidOperationException("Bootstrap admin email is already used by a non-admin account.");
+
+            var passwordService = scope.ServiceProvider.GetRequiredService<PasswordService>();
+            db.Users.Add(new User
+            {
+                Id = Guid.NewGuid(), FirstName = "Store", LastName = "Administrator", Email = bootstrapEmail,
+                PasswordHash = passwordService.HashPassword(bootstrapPassword), Role = Roles.Admin,
+                IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+    }
 }
 
 if (app.Environment.IsDevelopment())

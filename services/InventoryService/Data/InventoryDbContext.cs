@@ -12,6 +12,7 @@ public class InventoryDbContext : DbContext
     }
 
     public DbSet<Inventory> Inventories => Set<Inventory>();
+    public DbSet<InventoryMovement> Movements => Set<InventoryMovement>();
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
@@ -47,6 +48,15 @@ public class InventoryDbContext : DbContext
 
             entity.HasIndex(i => i.ProductId)
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<InventoryMovement>(entity =>
+        {
+            entity.ToTable("inventory_movements");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).IsRequired().HasMaxLength(500);
+            entity.Property(x => x.Reference).HasMaxLength(200);
+            entity.HasIndex(x => new { x.ProductId, x.CreatedAt });
         });
     }
 }

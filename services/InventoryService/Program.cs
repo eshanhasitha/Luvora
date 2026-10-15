@@ -28,6 +28,9 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 
 var app = builder.Build();
 
+await using (var scope = app.Services.CreateAsyncScope())
+    await scope.ServiceProvider.GetRequiredService<InventoryDbContext>().Database.MigrateAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
