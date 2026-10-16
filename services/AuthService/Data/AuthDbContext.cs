@@ -38,6 +38,13 @@ public class AuthDbContext : DbContext
                 .HasMaxLength(100);
 
             entity.Property(u => u.PhoneNumber).HasMaxLength(40);
+            entity.Property(u => u.DisplayName).HasMaxLength(120);
+            entity.Property(u => u.WardrobeCategory).HasMaxLength(20);
+            entity.Property(u => u.StandardSize).HasMaxLength(30);
+            entity.Property(u => u.AlterationPreference).HasMaxLength(500);
+            entity.Property(u => u.PreferredFabrics).HasColumnType("text[]").IsRequired();
+            entity.Property(u => u.SecondaryPhone).HasMaxLength(40);
+            entity.Property(u => u.PreferredChannel).HasMaxLength(20);
 
             entity.Property(u => u.Email)
                 .IsRequired()
@@ -73,6 +80,7 @@ public class AuthDbContext : DbContext
             entity.Property(address => address.Region).HasMaxLength(120);
             entity.Property(address => address.PostalCode).HasMaxLength(30);
             entity.Property(address => address.Country).HasMaxLength(120).IsRequired();
+            entity.Property(address => address.DeliveryInstructions).HasMaxLength(500);
             entity.HasIndex(address => address.UserId);
             entity.HasOne<User>().WithMany().HasForeignKey(address => address.UserId).OnDelete(DeleteBehavior.Cascade);
         });

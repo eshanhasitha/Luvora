@@ -22,18 +22,35 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     {
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == CurrentUserId);
         if (user is null) return Unauthorized();
-        return Ok(new { id = user.Id, firstName = user.FirstName, lastName = user.LastName, email = user.Email, phoneNumber = user.PhoneNumber, role = user.Role });
+        return Ok(new { id = user.Id, firstName = user.FirstName, lastName = user.LastName, email = user.Email, phoneNumber = user.PhoneNumber, dateOfBirth = user.DateOfBirth, displayName = user.DisplayName, wardrobeCategory = user.WardrobeCategory, standardSize = user.StandardSize, alterationPreference = user.AlterationPreference, preferredFabrics = user.PreferredFabrics, secondaryPhone = user.SecondaryPhone, preferredChannel = user.PreferredChannel, role = user.Role });
     }
 
     [HttpPut("profile")]
     [HttpPatch("/api/users/me")]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
     {
+        if (request.DateOfBirth > DateOnly.FromDateTime(DateTime.UtcNow))
+            return BadRequest(new { message = "Date of birth must be in the past." });
+
+        if (!IsOneOf(request.WardrobeCategory, "women", "men", "unisex"))
+            return BadRequest(new { message = "Wardrobe category must be women, men, or unisex." });
+
+        if (!IsOneOf(request.PreferredChannel, "email", "phone", "whatsapp"))
+            return BadRequest(new { message = "Preferred channel must be email, phone, or whatsapp." });
+
         var user = await db.Users.FirstOrDefaultAsync(x => x.Id == CurrentUserId);
         if (user is null) return Unauthorized();
         user.FirstName = request.FirstName.Trim();
         user.LastName = request.LastName.Trim();
         user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        user.DateOfBirth = request.DateOfBirth;
+        user.DisplayName = Normalize(request.DisplayName);
+        user.WardrobeCategory = Normalize(request.WardrobeCategory)?.ToLowerInvariant();
+        user.StandardSize = Normalize(request.StandardSize);
+        user.AlterationPreference = Normalize(request.AlterationPreference);
+        user.PreferredFabrics = (request.PreferredFabrics ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        user.SecondaryPhone = Normalize(request.SecondaryPhone);
+        user.PreferredChannel = Normalize(request.PreferredChannel)?.ToLowerInvariant();
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         return await GetProfile();
@@ -223,7 +240,13 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
         target.Region = string.IsNullOrWhiteSpace(source.Region) ? null : source.Region.Trim();
         target.PostalCode = string.IsNullOrWhiteSpace(source.PostalCode) ? null : source.PostalCode.Trim();
         target.Country = source.Country.Trim();
+        target.DeliveryInstructions = Normalize(source.DeliveryInstructions);
         target.IsDefault = source.IsDefault;
         return target;
     }
+
+    private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsOneOf(string? value, params string[] allowed) =>
+        string.IsNullOrWhiteSpace(value) || allowed.Contains(value.Trim(), StringComparer.OrdinalIgnoreCase);
 }

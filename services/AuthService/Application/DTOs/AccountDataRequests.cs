@@ -7,6 +7,14 @@ public class UpdateProfileRequest
     [Required, MaxLength(100)] public string FirstName { get; set; } = string.Empty;
     [Required, MaxLength(100)] public string LastName { get; set; } = string.Empty;
     [Phone, MaxLength(40)] public string? PhoneNumber { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    [MaxLength(120)] public string? DisplayName { get; set; }
+    [MaxLength(20)] public string? WardrobeCategory { get; set; }
+    [MaxLength(30)] public string? StandardSize { get; set; }
+    [MaxLength(500)] public string? AlterationPreference { get; set; }
+    [MaxLength(20)] public string[]? PreferredFabrics { get; set; }
+    [Phone, MaxLength(40)] public string? SecondaryPhone { get; set; }
+    [MaxLength(20)] public string? PreferredChannel { get; set; }
 }
 
 public class AddressRequest
@@ -20,6 +28,7 @@ public class AddressRequest
     [MaxLength(120)] public string? Region { get; set; }
     [MaxLength(30)] public string? PostalCode { get; set; }
     [Required, MaxLength(120)] public string Country { get; set; } = string.Empty;
+    [MaxLength(500)] public string? DeliveryInstructions { get; set; }
     public bool IsDefault { get; set; }
 }
 

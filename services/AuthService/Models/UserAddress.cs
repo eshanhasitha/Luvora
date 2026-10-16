@@ -13,6 +13,7 @@ public class UserAddress
     public string? Region { get; set; }
     public string? PostalCode { get; set; }
     public string Country { get; set; } = string.Empty;
+    public string? DeliveryInstructions { get; set; }
     public bool IsDefault { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
