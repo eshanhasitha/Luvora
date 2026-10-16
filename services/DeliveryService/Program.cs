@@ -20,6 +20,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     RoleClaimType = System.Security.Claims.ClaimTypes.Role, ClockSkew = TimeSpan.FromSeconds(30)
 });
 builder.Services.AddAuthorization();
+var orderServiceUrl = builder.Configuration["Services:OrderService"] ?? "http://localhost:5046/";
+builder.Services.AddHttpClient("orders", client => client.BaseAddress = new Uri(orderServiceUrl));
 
 builder.Services.AddDbContext<DeliveryDbContext>(options =>
     options.UseNpgsql(

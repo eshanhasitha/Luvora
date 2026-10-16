@@ -15,13 +15,16 @@ public class ReviewController : ControllerBase
 {
     private readonly ReviewDbContext _dbContext;
     private readonly HttpClient _productsClient;
+    private readonly IHttpClientFactory _clients;
 
     public ReviewController(ReviewDbContext dbContext, IHttpClientFactory clients)
     {
         _dbContext = dbContext;
+        _clients = clients;
         _productsClient = clients.CreateClient("products");
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> CreateReview(
         CreateReviewRequest request)
@@ -40,6 +43,12 @@ public class ReviewController : ControllerBase
                     "Rating must be between 1 and 5."
             });
         }
+
+        if (request.OrderId is not Guid orderId)
+            return BadRequest(new { message = "An eligible delivered order ID is required to review a product." });
+
+        var orderCheck = await VerifyPurchasedProduct(orderId, request.ProductId.Value, authenticatedUserId);
+        if (orderCheck is not null) return orderCheck;
 
         var existingReview =
             await _dbContext.Reviews
@@ -129,6 +138,7 @@ public class ReviewController : ControllerBase
         return GetProductReviews(productId);
     }
 
+    [Authorize]
     [HttpPost("/api/products/{productId:guid}/reviews")]
     public async Task<IActionResult> CreateReviewFromProductRoute(
         Guid productId,
@@ -157,9 +167,10 @@ public class ReviewController : ControllerBase
 
         request.UserId = userId;
         request.ProductId = productId.Value;
-        request.OrderId = null;
+        if (request.OrderId is not Guid orderId)
+            return BadRequest(new { message = "An eligible delivered order ID is required to review a product." });
 
-        var duplicate = await _dbContext.Reviews.AnyAsync(r => r.UserId == userId && r.ProductId == productId.Value && r.OrderId == null);
+        var duplicate = await _dbContext.Reviews.AnyAsync(r => r.UserId == userId && r.ProductId == productId.Value && r.OrderId == orderId);
         if (duplicate) return Conflict(new { message = "You have already reviewed this product." });
         return await CreateReview(request);
     }
@@ -269,9 +280,55 @@ public class ReviewController : ControllerBase
         }
     }
 
+    private async Task<IActionResult?> VerifyPurchasedProduct(Guid orderId, Guid productId, Guid userId)
+    {
+        var client = _clients.CreateClient("orders");
+        var authorization = Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authorization)) client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authorization);
+
+        try
+        {
+            using var response = await client.GetAsync($"api/users/me/orders/{orderId}", HttpContext.RequestAborted);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return BadRequest(new { message = "A delivered order belonging to this customer is required." });
+            if (!response.IsSuccessStatusCode)
+                return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order eligibility could not be verified.");
+
+            var order = await response.Content.ReadFromJsonAsync<ReviewOrder>(cancellationToken: HttpContext.RequestAborted);
+            if (order is null || order.UserId != userId)
+                return BadRequest(new { message = "A delivered order belonging to this customer is required." });
+            if (!string.Equals(order.Status, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Only products in delivered orders can be reviewed." });
+            if (order.Items is null || !order.Items.Any(x => x.ProductId == productId && x.Quantity > 0))
+                return BadRequest(new { message = "The product is not part of the specified order." });
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order eligibility could not be verified.");
+        }
+        catch (TaskCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order eligibility could not be verified.");
+        }
+    }
+
     private sealed class ProductLookup
     {
         public Guid Id { get; set; }
+    }
+
+    private sealed class ReviewOrder
+    {
+        public Guid UserId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public List<ReviewOrderItem>? Items { get; set; }
+    }
+
+    private sealed class ReviewOrderItem
+    {
+        public Guid ProductId { get; set; }
+        public int Quantity { get; set; }
     }
 
     public sealed record UpdateReviewRequest(int Rating, string Comment, string? Title = null);

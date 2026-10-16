@@ -210,7 +210,8 @@ public class OrderController : ControllerBase
     [HttpPost("{orderId:guid}/cancel")]
     [HttpPost("/api/users/me/orders/{orderId:guid}/cancel")]
     public async Task<IActionResult> CancelOrder(
-        Guid orderId)
+        Guid orderId,
+        [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CancelOrderRequest? request = null)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
         var order = await _dbContext.Orders
@@ -242,6 +243,9 @@ public class OrderController : ControllerBase
         }
 
         order.Status = "CANCELLED";
+        order.CancellationReason = string.IsNullOrWhiteSpace(request?.Reason) ? null : request.Reason.Trim();
+        order.CancelledAt = DateTime.UtcNow;
+        order.CancelledBy = currentUserId;
         order.UpdatedAt = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync();
@@ -251,7 +255,53 @@ public class OrderController : ControllerBase
             message = "Order cancelled successfully.",
             orderId = order.Id,
             orderNumber = order.OrderNumber,
-            status = order.Status
+            status = order.Status,
+            cancellationReason = order.CancellationReason,
+            cancelledAt = order.CancelledAt
         });
     }
+
+    [HttpPost("/api/users/me/orders/{orderId:guid}/returns")]
+    public async Task<IActionResult> RequestReturn(Guid orderId, CreateReturnRequest request)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        var order = await _dbContext.Orders.Include(x => x.Items)
+            .SingleOrDefaultAsync(x => x.Id == orderId && x.UserId == userId);
+        if (order is null) return NotFound(new { message = "Order not found." });
+        if (!string.Equals(order.Status, "DELIVERED", StringComparison.OrdinalIgnoreCase))
+            return Conflict(new { message = "Only delivered orders can be returned.", currentStatus = order.Status });
+
+        var item = order.Items.SingleOrDefault(x => x.Id == request.OrderItemId);
+        if (item is null) return BadRequest(new { message = "The item does not belong to this order." });
+        var alreadyRequested = await _dbContext.ReturnRequests
+            .Where(x => x.OrderItemId == item.Id && x.Status != "REJECTED")
+            .SumAsync(x => (int?)x.Quantity) ?? 0;
+        if (request.Quantity > item.Quantity - alreadyRequested)
+            return Conflict(new { message = "Return quantity exceeds the quantity available for return." });
+
+        var now = DateTime.UtcNow;
+        var returnRequest = new ReturnRequest
+        {
+            Id = Guid.NewGuid(), UserId = userId, OrderId = order.Id, OrderItemId = item.Id,
+            Quantity = request.Quantity, Reason = request.Reason.Trim(),
+            Details = string.IsNullOrWhiteSpace(request.Details) ? null : request.Details.Trim(),
+            CreatedAt = now, UpdatedAt = now
+        };
+        _dbContext.ReturnRequests.Add(returnRequest);
+        await _dbContext.SaveChangesAsync();
+        return Created($"/api/users/me/orders/{order.Id}/returns/{returnRequest.Id}", returnRequest);
+    }
+
+    [HttpGet("/api/users/me/orders/{orderId:guid}/returns")]
+    public async Task<IActionResult> GetMyReturnRequests(Guid orderId)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        if (!await _dbContext.Orders.AnyAsync(x => x.Id == orderId && x.UserId == userId)) return NotFound();
+        var returns = await _dbContext.ReturnRequests.AsNoTracking()
+            .Where(x => x.OrderId == orderId && x.UserId == userId)
+            .OrderByDescending(x => x.CreatedAt).ToListAsync();
+        return Ok(returns);
+    }
+
+    public sealed record CancelOrderRequest(string? Reason);
 }

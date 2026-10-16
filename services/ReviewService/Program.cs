@@ -27,6 +27,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 var productServiceUrl = builder.Configuration["Services:ProductService"] ?? "http://localhost:5125/";
 builder.Services.AddHttpClient("products", client => client.BaseAddress = new Uri(productServiceUrl));
+var orderServiceUrl = builder.Configuration["Services:OrderService"] ?? "http://localhost:5046/";
+builder.Services.AddHttpClient("orders", client => client.BaseAddress = new Uri(orderServiceUrl));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

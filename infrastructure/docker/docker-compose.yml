@@ -99,6 +99,13 @@ services:
       Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
       Jwt__Issuer: Luvora.AuthService
       Jwt__Audience: Luvora.Client
+      Email__Host: ${SMTP_HOST:-}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__Username: ${SMTP_USERNAME:-}
+      Email__Password: ${SMTP_PASSWORD:-}
+      Email__From: ${SMTP_FROM:-}
+      Email__UseSsl: ${SMTP_USE_SSL:-true}
+      Email__VerificationUrl: ${EMAIL_VERIFICATION_URL:-}
       BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
 
@@ -291,6 +298,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      order-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -299,6 +308,7 @@ services:
       Jwt__Key: ${JWT_KEY:-LDk9ZUiN2ygsLxRB2a7YgUlKHCAGp0Tbk0ltBDWtOpQ=}
       Jwt__Issuer: Luvora.AuthService
       Jwt__Audience: Luvora.Client
+      Services__OrderService: http://order-service:8080/
 
     networks:
       - luvora-network
@@ -353,6 +363,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      order-service:
+        condition: service_started
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
@@ -362,6 +374,7 @@ services:
       Jwt__Issuer: Luvora.AuthService
       Jwt__Audience: Luvora.Client
       Services__ProductService: http://product-service:8080/
+      Services__OrderService: http://order-service:8080/
 
     networks:
       - luvora-network

@@ -15,6 +15,8 @@ public class OrderDbContext : DbContext
 
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
+    public DbSet<ReturnRequest> ReturnRequests => Set<ReturnRequest>();
+
     protected override void OnModelCreating(
         ModelBuilder modelBuilder)
     {
@@ -41,6 +43,8 @@ public class OrderDbContext : DbContext
                 .HasPrecision(18, 2)
                 .IsRequired();
 
+            entity.Property(o => o.CancellationReason).HasMaxLength(500);
+
             entity.Property(o => o.CreatedAt)
                 .IsRequired();
 
@@ -51,6 +55,19 @@ public class OrderDbContext : DbContext
                 .IsUnique();
 
             entity.HasIndex(o => o.UserId);
+        });
+
+        modelBuilder.Entity<ReturnRequest>(entity =>
+        {
+            entity.ToTable("return_requests");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Details).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.OrderId);
+            entity.HasOne<Order>().WithMany().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<OrderItem>().WithMany().HasForeignKey(x => x.OrderItemId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OrderItem>(entity =>

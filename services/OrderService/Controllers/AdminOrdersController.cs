@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +31,10 @@ public sealed class AdminOrdersController(OrderDbContext db) : ControllerBase
         var order = await db.Orders.SingleOrDefaultAsync(x => x.Id == orderId);
         if (order is null) return NotFound();
         if (order.Status is not ("CREATED" or "PAYMENT_PENDING")) return Conflict(new { message = "Order cannot be cancelled in its current status.", currentStatus = order.Status });
-        order.Status = "CANCELLED"; order.UpdatedAt = DateTime.UtcNow; await db.SaveChangesAsync();
-        return Ok(new { order.Id, order.OrderNumber, order.Status });
+        order.Status = "CANCELLED"; order.CancelledAt = DateTime.UtcNow; order.UpdatedAt = DateTime.UtcNow;
+        if (Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId)) order.CancelledBy = actorId;
+        await db.SaveChangesAsync();
+        return Ok(new { order.Id, order.OrderNumber, order.Status, order.CancelledAt });
     }
 
     [HttpGet]
@@ -66,9 +69,41 @@ public sealed class AdminOrdersController(OrderDbContext db) : ControllerBase
         if (next is null || !transitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(next))
             return Conflict(new { message = "This order status transition is not allowed.", currentStatus = order.Status });
         order.Status = next; order.UpdatedAt = DateTime.UtcNow;
+        if (next == "CANCELLED")
+        {
+            order.CancelledAt = DateTime.UtcNow;
+            if (Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId)) order.CancelledBy = actorId;
+        }
         await db.SaveChangesAsync();
         return Ok(new { order.Id, order.OrderNumber, order.Status, order.UpdatedAt });
     }
 
+    [HttpGet("returns")]
+    public async Task<IActionResult> ReturnRequests([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = db.ReturnRequests.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.Trim().ToUpperInvariant());
+        var total = await query.CountAsync();
+        var items = await query.OrderByDescending(x => x.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return Ok(new { page, pageSize, totalItems = total, returnRequests = items });
+    }
+
+    [HttpPatch("{orderId:guid}/returns/{returnRequestId:guid}/status")]
+    public async Task<IActionResult> UpdateReturnStatus(Guid orderId, Guid returnRequestId, [FromBody] ReturnStatusRequest request)
+    {
+        var item = await db.ReturnRequests.SingleOrDefaultAsync(x => x.OrderId == orderId && x.Id == returnRequestId);
+        if (item is null) return NotFound();
+        var next = request.Status?.Trim().ToUpperInvariant();
+        if (next is not ("APPROVED" or "REJECTED")) return BadRequest(new { message = "Return status must be APPROVED or REJECTED." });
+        if (item.Status != "REQUESTED") return Conflict(new { message = "Only requested returns can be reviewed.", currentStatus = item.Status });
+        item.Status = next;
+        item.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+        return Ok(item);
+    }
+
     public sealed record StatusRequest(string Status);
+    public sealed record ReturnStatusRequest(string Status);
 }

@@ -30,6 +30,8 @@ public class User
 
     public string Email { get; set; } = string.Empty;
 
+    public DateTime? EmailVerifiedAt { get; set; }
+
     public string PasswordHash { get; set; } = string.Empty;
 
     public string Role { get; set; } = Roles.Customer;

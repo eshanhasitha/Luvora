@@ -8,6 +8,7 @@ public class CreateReviewRequest
 
     public Guid? ProductId { get; set; }
 
+    [Required]
     public Guid? OrderId { get; set; }
 
     [Range(1, 5)]

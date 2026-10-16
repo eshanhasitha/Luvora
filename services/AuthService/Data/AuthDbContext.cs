@@ -18,6 +18,7 @@ public class AuthDbContext : DbContext
 
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
+    public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,6 +128,16 @@ public class AuthDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmailVerificationToken>(entity =>
+        {
+            entity.ToTable("email_verification_tokens");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

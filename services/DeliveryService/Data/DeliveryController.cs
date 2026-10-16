@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Net.Http.Json;
 
 namespace DeliveryService.Controllers;
 
@@ -14,11 +15,14 @@ namespace DeliveryService.Controllers;
 public class DeliveryController : ControllerBase
 {
     private readonly DeliveryDbContext _dbContext;
+    private readonly IHttpClientFactory _clients;
 
     public DeliveryController(
-        DeliveryDbContext dbContext)
+        DeliveryDbContext dbContext,
+        IHttpClientFactory clients)
     {
         _dbContext = dbContext;
+        _clients = clients;
     }
 
     [HttpPost]
@@ -27,6 +31,36 @@ public class DeliveryController : ControllerBase
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId)) return Unauthorized();
         if (request.UserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+
+        var orders = _clients.CreateClient("orders");
+        var authorization = Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authorization)) orders.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", authorization);
+        OrderSummary? order;
+        try
+        {
+            var orderPath = request.UserId == currentUserId
+                ? $"api/users/me/orders/{request.OrderId}"
+                : $"api/admin/orders/{request.OrderId}";
+            using var response = await orders.GetAsync(orderPath, HttpContext.RequestAborted);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return BadRequest(new { message = "The order does not belong to the specified customer." });
+            if (!response.IsSuccessStatusCode)
+                return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order ownership could not be verified.");
+            order = await response.Content.ReadFromJsonAsync<OrderSummary>(cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order ownership could not be verified.");
+        }
+        catch (TaskCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Order ownership could not be verified.");
+        }
+
+        if (order is null || order.UserId != request.UserId)
+            return BadRequest(new { message = "The order does not belong to the specified customer." });
+        if (order.Status is not ("CONFIRMED" or "PROCESSING"))
+            return Conflict(new { message = "A delivery can only be created for a confirmed or processing order.", currentStatus = order.Status });
         var existingDelivery =
             await _dbContext.Deliveries
                 .FirstOrDefaultAsync(
@@ -63,6 +97,12 @@ public class DeliveryController : ControllerBase
             new { deliveryId = delivery.Id },
             ToResponse(delivery)
         );
+    }
+
+    private sealed class OrderSummary
+    {
+        public Guid UserId { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 
     [HttpGet("{deliveryId:guid}")]

@@ -22,7 +22,7 @@ public class AccountController(AuthDbContext db, PasswordService passwords) : Co
     {
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == CurrentUserId);
         if (user is null) return Unauthorized();
-        return Ok(new { id = user.Id, firstName = user.FirstName, lastName = user.LastName, email = user.Email, phoneNumber = user.PhoneNumber, dateOfBirth = user.DateOfBirth, displayName = user.DisplayName, wardrobeCategory = user.WardrobeCategory, standardSize = user.StandardSize, alterationPreference = user.AlterationPreference, preferredFabrics = user.PreferredFabrics, secondaryPhone = user.SecondaryPhone, preferredChannel = user.PreferredChannel, role = user.Role });
+        return Ok(new { id = user.Id, firstName = user.FirstName, lastName = user.LastName, email = user.Email, emailVerifiedAt = user.EmailVerifiedAt, phoneNumber = user.PhoneNumber, dateOfBirth = user.DateOfBirth, displayName = user.DisplayName, wardrobeCategory = user.WardrobeCategory, standardSize = user.StandardSize, alterationPreference = user.AlterationPreference, preferredFabrics = user.PreferredFabrics, secondaryPhone = user.SecondaryPhone, preferredChannel = user.PreferredChannel, role = user.Role });
     }
 
     [HttpPut("profile")]

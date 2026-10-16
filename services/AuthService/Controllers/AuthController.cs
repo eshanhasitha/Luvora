@@ -19,17 +19,20 @@ public class AuthController : ControllerBase
     private readonly PasswordService _passwordService;
     private readonly TokenService _tokenService;
     private readonly RefreshTokenService _refreshTokenService;
+    private readonly EmailVerificationService _emailVerificationService;
 
     public AuthController(
     AuthDbContext dbContext,
     PasswordService passwordService,
     TokenService tokenService,
-    RefreshTokenService refreshTokenService)
+    RefreshTokenService refreshTokenService,
+    EmailVerificationService emailVerificationService)
     {
         _dbContext = dbContext;
         _passwordService = passwordService;
         _tokenService = tokenService;
         _refreshTokenService = refreshTokenService;
+        _emailVerificationService = emailVerificationService;
     }
 
     [HttpPost("register")]
@@ -67,9 +70,12 @@ public class AuthController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
 
+        var verificationEmailSent = await _emailVerificationService.SendAsync(user, HttpContext.RequestAborted);
+
         return StatusCode(StatusCodes.Status201Created, new
         {
             message = "User registered successfully.",
+            verificationEmailSent,
             user = new
             {
                 user.Id,
@@ -279,9 +285,36 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("resend-verification")]
-    public IActionResult ResendVerification()
+    public async Task<IActionResult> ResendVerification(CancellationToken cancellationToken)
     {
-        return Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Verification email delivery is not configured.");
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        var user = await _dbContext.Users.SingleOrDefaultAsync(x => x.Id == userId && x.IsActive, cancellationToken);
+        if (user is null) return Unauthorized();
+        if (user.EmailVerifiedAt.HasValue) return Ok(new { message = "Email address is already verified." });
+        if (!await _emailVerificationService.SendAsync(user, cancellationToken))
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Email verification delivery is unavailable. Configure SMTP settings and try again.");
+        return Ok(new { message = "Verification email sent." });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail(VerifyEmailRequest request, CancellationToken cancellationToken)
+    {
+        var tokenHash = EmailVerificationService.Hash(request.Token.Trim());
+        var token = await _dbContext.EmailVerificationTokens
+            .SingleOrDefaultAsync(x => x.TokenHash == tokenHash, cancellationToken);
+        if (token is null || token.UsedAt.HasValue || token.ExpiresAt <= DateTime.UtcNow)
+            return BadRequest(new { message = "Verification token is invalid or expired." });
+
+        var user = await _dbContext.Users.SingleOrDefaultAsync(x => x.Id == token.UserId && x.IsActive, cancellationToken);
+        if (user is null) return BadRequest(new { message = "Verification token is invalid or expired." });
+
+        var now = DateTime.UtcNow;
+        user.EmailVerifiedAt ??= now;
+        user.UpdatedAt = now;
+        token.UsedAt = now;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new { message = "Email address verified successfully.", emailVerifiedAt = user.EmailVerifiedAt });
     }
 
     [Authorize(Roles = Roles.Admin)]
