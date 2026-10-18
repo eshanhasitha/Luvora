@@ -4,6 +4,7 @@ using ReportingService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(); builder.Services.AddEndpointsApiExplorer(); builder.Services.AddSwaggerGen();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<ReportingDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("ReportingDatabase")));
 builder.Services.AddHttpClient("reports", client => client.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddScoped<ReportDataProvider>();

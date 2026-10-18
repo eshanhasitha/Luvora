@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace ReportingService.Services;
 
-public sealed class ReportDataProvider(IConfiguration configuration, IHttpClientFactory clients)
+public sealed class ReportDataProvider(IConfiguration configuration, IHttpClientFactory clients, IHttpContextAccessor httpContextAccessor)
 {
     public static readonly string[] SupportedReports = ["sales", "revenue", "orders", "products", "inventory", "customers", "payments", "delivery", "coupons"];
 
@@ -40,7 +40,14 @@ public sealed class ReportDataProvider(IConfiguration configuration, IHttpClient
     {
         var address = configuration[$"ServiceUrls:{service}"];
         if (!Uri.TryCreate(address, UriKind.Absolute, out var baseAddress)) throw new HttpRequestException($"{service} report source is not configured.");
-        using var response = await clients.CreateClient("reports").GetAsync(new Uri(baseAddress, path), cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(baseAddress, path));
+        if (httpContextAccessor.HttpContext?.Request.Headers.Authorization is { } authorization
+            && !string.IsNullOrWhiteSpace(authorization))
+        {
+            request.Headers.TryAddWithoutValidation("Authorization", authorization.ToString());
+        }
+
+        using var response = await clients.CreateClient("reports").SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"{service} report source returned {(int)response.StatusCode}.");
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
