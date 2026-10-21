@@ -14,8 +14,8 @@ public sealed class ReportDataProvider(IConfiguration configuration, IHttpClient
         var query = BuildDateQuery(from, to);
         var document = type switch
         {
-            "sales" or "orders" or "products" => await Fetch("Order", $"api/admin/orders?page=1&pageSize=100{query}", cancellationToken),
-            "revenue" or "payments" => await Fetch("Payment", $"api/admin/payments/transactions?page=1&pageSize=100{query}", cancellationToken),
+            "sales" or "orders" or "products" => await FetchAllPages("Order", "api/admin/orders", "orders", query, cancellationToken),
+            "revenue" or "payments" => await FetchAllPages("Payment", "api/admin/payments/transactions", "transactions", query, cancellationToken),
             "inventory" => await Fetch("Inventory", "api/admin/inventory/stock?page=1&pageSize=100", cancellationToken),
             "customers" => await Fetch("Auth", "api/admin/customers?page=1&pageSize=100", cancellationToken),
             "delivery" => await Fetch("Delivery", "api/admin/delivery/shipments?page=1&pageSize=100", cancellationToken),
@@ -51,6 +51,60 @@ public sealed class ReportDataProvider(IConfiguration configuration, IHttpClient
         if (!response.IsSuccessStatusCode) throw new HttpRequestException($"{service} report source returned {(int)response.StatusCode}.");
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+    }
+
+    private async Task<JsonDocument> FetchAllPages(string service, string path, string collection, string query, CancellationToken cancellationToken)
+    {
+        const int pageSize = 100;
+        var rows = new List<JsonElement>();
+        JsonElement firstPage = default;
+        var totalItems = 0;
+
+        for (var page = 1; ; page++)
+        {
+            using var document = await Fetch(service, $"{path}?page={page}&pageSize={pageSize}{query}", cancellationToken);
+            var root = document.RootElement;
+            if (page == 1)
+            {
+                firstPage = root.Clone();
+            }
+
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty(collection, out var pageRows)
+                || pageRows.ValueKind != JsonValueKind.Array)
+            {
+                break;
+            }
+
+            var currentRows = pageRows.EnumerateArray().Select(row => row.Clone()).ToList();
+            rows.AddRange(currentRows);
+            totalItems = root.TryGetProperty("totalItems", out var total)
+                && total.TryGetInt32(out var parsedTotal)
+                    ? parsedTotal
+                    : rows.Count;
+
+            if (rows.Count >= totalItems || currentRows.Count == 0)
+            {
+                break;
+            }
+        }
+
+        if (firstPage.ValueKind != JsonValueKind.Object || !firstPage.TryGetProperty(collection, out _))
+        {
+            return JsonDocument.Parse(firstPage.ValueKind == JsonValueKind.Undefined ? "{}" : firstPage.GetRawText());
+        }
+
+        var result = System.Text.Json.Nodes.JsonNode.Parse(firstPage.GetRawText())!.AsObject();
+        var allRows = new System.Text.Json.Nodes.JsonArray();
+        foreach (var row in rows)
+        {
+            allRows.Add(System.Text.Json.Nodes.JsonNode.Parse(row.GetRawText()));
+        }
+
+        result[collection] = allRows;
+        result["totalItems"] = totalItems;
+
+        return JsonDocument.Parse(result.ToJsonString());
     }
 
     private static string BuildDateQuery(DateTime? from, DateTime? to)

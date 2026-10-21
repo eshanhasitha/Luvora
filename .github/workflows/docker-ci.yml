@@ -1,0 +1,72 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'services/**'
+      - 'infrastructure/docker/**'
+      - '.github/workflows/docker-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'services/**'
+      - 'infrastructure/docker/**'
+      - '.github/workflows/docker-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: ApiGateWay
+            image: luvora-api-gateway
+          - service: AuditService
+            image: luvora-audit-service
+          - service: AuthService
+            image: luvora-auth-service
+          - service: CartService
+            image: luvora-cart-service
+          - service: ConfigurationService
+            image: luvora-configuration-service
+          - service: DeliveryService
+            image: luvora-delivery-service
+          - service: InventoryService
+            image: luvora-inventory-service
+          - service: NotificationService
+            image: luvora-notification-service
+          - service: OrderService
+            image: luvora-order-service
+          - service: PaymentService
+            image: luvora-payment-service
+          - service: ProductService
+            image: luvora-product-service
+          - service: PromotionService
+            image: luvora-promotion-service
+          - service: ReportingService
+            image: luvora-reporting-service
+          - service: ReviewService
+            image: luvora-review-service
+          - service: SupportService
+            image: luvora-support-service
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.service }} image
+        run: >-
+          docker build
+          --file services/${{ matrix.service }}/Dockerfile
+          --tag ${{ matrix.image }}:${{ github.sha }}
+          services/${{ matrix.service }}
