@@ -69,4 +69,4 @@ jobs:
           docker build
           --file services/${{ matrix.service }}/Dockerfile
           --tag ${{ matrix.image }}:${{ github.sha }}
-          services/${{ matrix.service }}
+          services
