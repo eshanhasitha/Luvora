@@ -1,12 +1,14 @@
 using System.Text.Json;
 using ConfigurationService.Data;
 using ConfigurationService.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConfigurationService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/settings")]
 public sealed class AdminSettingsController(ConfigurationDbContext db) : ControllerBase
 {

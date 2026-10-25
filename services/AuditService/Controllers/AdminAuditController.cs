@@ -1,11 +1,13 @@
 using AuditService.Data;
 using AuditService.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuditService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/audit-logs")]
 public sealed class AdminAuditController(AuditDbContext db) : ControllerBase
 {
@@ -77,17 +79,23 @@ public sealed class AuditIngestController(AuditDbContext db, IConfiguration conf
 }
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/system")]
 public sealed class AdminSystemController(AuditDbContext db, IConfiguration config, IHttpClientFactory clients, IWebHostEnvironment environment) : ControllerBase
 {
-    private static readonly string[] ServiceKeys = ["Auth", "Product", "Inventory", "Order", "Payment", "Delivery", "Promotion", "Support", "Configuration", "Reporting", "Audit", "Notification", "Review"];
+    private static readonly string[] ServiceKeys = ["Gateway", "Auth", "Product", "Inventory", "Order", "Payment", "Delivery", "Promotion", "Support", "Configuration", "Reporting", "Audit", "Notification", "Review"];
 
     [HttpGet("health")]
     public async Task<IActionResult> Health()
     {
-        var connected = await db.Database.CanConnectAsync();
-        return StatusCode(connected ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable,
-            new { status = connected ? "Healthy" : "Degraded", service = "AuditService", environment = environment.EnvironmentName, timestamp = DateTime.UtcNow });
+        var checkedAt = DateTime.UtcNow;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var connected = false;
+        try { connected = await db.Database.CanConnectAsync(); }
+        catch (Exception) { connected = false; }
+        timer.Stop();
+        var database = new { status = connected ? "Healthy" : "Unhealthy", checkedAt, responseTimeMs = Math.Round(timer.Elapsed.TotalMilliseconds, 1) };
+        return Ok(new { status = connected ? "Healthy" : "Degraded", service = "AuditService", checkedAt, responseTimeMs = database.responseTimeMs, database });
     }
 
     [HttpGet("services")]
@@ -97,10 +105,15 @@ public sealed class AdminSystemController(AuditDbContext db, IConfiguration conf
         foreach (var key in ServiceKeys)
         {
             var address = config[$"ServiceUrls:{key}"];
-            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri)) { result.Add(new { service = key, status = "Unknown" }); continue; }
-            try { using var response = await client.GetAsync(new Uri(uri, "health"), cancellationToken); result.Add(new { service = key, status = response.IsSuccessStatusCode ? "Healthy" : "Unhealthy" }); }
-            catch (HttpRequestException) { result.Add(new { service = key, status = "Unhealthy" }); }
-            catch (TaskCanceledException) { result.Add(new { service = key, status = "Unhealthy" }); }
+            var checkedAt = DateTime.UtcNow;
+            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri)) { result.Add(new { service = key, status = "Unknown", checkedAt, responseTimeMs = (double?)null }); continue; }
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            var status = "Unhealthy";
+            try { using var response = await client.GetAsync(new Uri(uri, "health"), cancellationToken); status = response.IsSuccessStatusCode ? "Healthy" : "Unhealthy"; }
+            catch (HttpRequestException) { }
+            catch (TaskCanceledException) { }
+            finally { timer.Stop(); }
+            result.Add(new { service = key, status, checkedAt, responseTimeMs = Math.Round(timer.Elapsed.TotalMilliseconds, 1) });
         }
         return Ok(result);
     }

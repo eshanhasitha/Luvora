@@ -1,11 +1,13 @@
 using AuthService.Constants;
 using AuthService.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin")]
 [Route("api/admin/customers")]
 public sealed class AdminCustomersController(AuthDbContext db) : ControllerBase
 {

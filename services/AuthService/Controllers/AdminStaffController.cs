@@ -2,12 +2,15 @@ using AuthService.Constants;
 using AuthService.Data;
 using AuthService.Models;
 using AuthService.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace AuthService.Controllers;
 
 [ApiController]
+[Authorize(Roles = Roles.Admin)]
 [Route("api/admin/staff")]
 public sealed class AdminStaffController(AuthDbContext db, PasswordService passwords) : ControllerBase
 {
@@ -53,6 +56,10 @@ public sealed class AdminStaffController(AuthDbContext db, PasswordService passw
     {
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == staffId && x.Role != Roles.Customer && x.Role != Roles.DeliveryAgent);
         if (user is null) return NotFound();
+        if (!request.Active && IsCurrentAdministrator(staffId)) return Conflict(new { message = "You cannot deactivate your own administrator account." });
+        if (!request.Active && user.IsActive && user.Role == Roles.Admin &&
+            !await db.Users.AnyAsync(x => x.Role == Roles.Admin && x.IsActive && x.Id != staffId))
+            return Conflict(new { message = "The last active administrator account cannot be deactivated." });
         user.IsActive = request.Active; user.UpdatedAt = DateTime.UtcNow;
         if (!user.IsActive)
         {
@@ -68,9 +75,23 @@ public sealed class AdminStaffController(AuthDbContext db, PasswordService passw
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == staffId && x.Role != Roles.Customer && x.Role != Roles.DeliveryAgent);
         if (user is null) return NotFound();
         if (request.Role is not (Roles.Staff or Roles.Admin)) return BadRequest(new { message = "Role must be Staff or Admin." });
+        if (request.Role != Roles.Admin && IsCurrentAdministrator(staffId)) return Conflict(new { message = "You cannot remove your own administrator role." });
+        if (request.Role != Roles.Admin && user.IsActive && user.Role == Roles.Admin &&
+            !await db.Users.AnyAsync(x => x.Role == Roles.Admin && x.IsActive && x.Id != staffId))
+            return Conflict(new { message = "The last active administrator account must remain an administrator." });
+        var wasAdministrator = user.Role == Roles.Admin;
         user.Role = request.Role; user.UpdatedAt = DateTime.UtcNow; await db.SaveChangesAsync();
+        if (wasAdministrator && request.Role != Roles.Admin)
+        {
+            var activeTokens = await db.RefreshTokens.Where(x => x.UserId == user.Id && !x.IsRevoked).ToListAsync();
+            foreach (var token in activeTokens) token.RevokedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
         return Ok(new { user.Id, user.Role, user.UpdatedAt });
     }
+
+    private bool IsCurrentAdministrator(Guid staffId) =>
+        Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var currentUserId) && currentUserId == staffId;
 
     [HttpGet("{staffId:guid}/roles")]
     public async Task<IActionResult> GetRole(Guid staffId)

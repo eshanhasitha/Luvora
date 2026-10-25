@@ -474,6 +474,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__AuditDatabase: Host=postgres;Port=5432;Database=audit_db;Username=luvora;Password=eshanfis511
       Audit__IngestKey: ${AUDIT_INGEST_KEY:-dev-audit-ingest-key-change-in-production}
+      ServiceUrls__Gateway: http://api-gateway:8080/
       ServiceUrls__Auth: http://auth-service:8080/
       ServiceUrls__Product: http://product-service:8080/
       ServiceUrls__Inventory: http://inventory-service:8080/
