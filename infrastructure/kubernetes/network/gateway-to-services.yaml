@@ -6,8 +6,24 @@ metadata:
 
 spec:
   podSelector:
-    matchLabels:
-      app: product-service
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - auth-service
+          - product-service
+          - inventory-service
+          - cart-service
+          - order-service
+          - payment-service
+          - delivery-service
+          - notification-service
+          - review-service
+          - promotion-service
+          - support-service
+          - reporting-service
+          - configuration-service
+          - audit-service
 
   policyTypes:
     - Ingress

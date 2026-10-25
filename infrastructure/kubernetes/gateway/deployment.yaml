@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: luvora-api-gateway:k8s-20261006
+          image: luvora-api-gateway:1.0
 
           imagePullPolicy: IfNotPresent
 
@@ -25,8 +25,26 @@ spec:
             - containerPort: 8080
 
           env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
             - name: ASPNETCORE_ENVIRONMENT
               value: "Docker"
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Audit__BaseUrl
+              value: "http://audit-service:8080/"
+            - name: Audit__IngestKey
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: AUDIT_INGEST_KEY
 
           resources:
             requests:

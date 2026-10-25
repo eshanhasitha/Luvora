@@ -5,7 +5,11 @@ metadata:
   namespace: luvora
 
 spec:
-  podSelector: {}
+  # Keep ingress open within the cluster for now; service-specific policies below
+  # restrict access to Postgres, RabbitMQ, and the API backend.
+  podSelector:
+    matchLabels:
+      network-policy-default-deny: "enabled"
 
   policyTypes:
     - Ingress

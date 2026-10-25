@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: luvora-auth-service:latest
+          image: luvora-auth-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -26,7 +26,7 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__AuthDatabase
               valueFrom:
@@ -42,7 +42,6 @@ spec:
 
             - name: Jwt__Issuer
               value: "Luvora.AuthService"
-
             - name: Jwt__Audience
               value: "Luvora.Client"
 
@@ -95,7 +94,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: luvora-product-service:latest
+          image: luvora-product-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -103,7 +102,7 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: Jwt__Key
               valueFrom:
@@ -122,6 +121,9 @@ spec:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__ProductDatabase
+
+            - name: Services__InventoryService
+              value: "http://inventory-service:8080/"
 
           resources:
             requests:
@@ -176,7 +178,7 @@ spec:
     spec:
       containers:
         - name: inventory-service
-          image: luvora-inventory-service:latest
+          image: luvora-inventory-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -184,13 +186,22 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__InventoryDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__InventoryDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
             - name: RabbitMq__Host
               value: rabbitmq
 
@@ -254,7 +265,7 @@ spec:
     spec:
       containers:
         - name: cart-service
-          image: luvora-cart-service:latest
+          image: luvora-cart-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -262,13 +273,24 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__CartDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__CartDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__ProductService
+              value: "http://product-service:8080/"
           resources:
             requests:
               cpu: "100m"
@@ -314,7 +336,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: luvora-order-service:latest
+          image: luvora-order-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -322,13 +344,24 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__OrderDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__OrderDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__ProductService
+              value: "http://product-service:8080/"
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -393,7 +426,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: luvora-payment-service:latest
+          image: luvora-payment-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -401,13 +434,24 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__PaymentDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__PaymentDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__OrderService
+              value: "http://order-service:8080/"
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -471,7 +515,7 @@ spec:
     spec:
       containers:
         - name: delivery-service
-          image: luvora-delivery-service:latest
+          image: luvora-delivery-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -479,13 +523,24 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__DeliveryDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__DeliveryDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__OrderService
+              value: "http://order-service:8080/"
           resources:
             requests:
               cpu: "100m"
@@ -532,7 +587,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: luvora-notification-service:latest
+          image: luvora-notification-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -540,13 +595,24 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__NotificationDatabase
               valueFrom:
                 secretKeyRef:
                   name: luvora-db-secret
                   key: ConnectionStrings__NotificationDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__OrderService
+              value: "http://order-service:8080/"
             - name: RabbitMq__Host
               value: "rabbitmq"
 
@@ -610,7 +676,7 @@ spec:
     spec:
       containers:
         - name: review-service
-          image: luvora-review-service:latest
+          image: luvora-review-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -618,7 +684,7 @@ spec:
 
           env:
             - name: ASPNETCORE_ENVIRONMENT
-              value: "Docker"
+              value: "Development"
 
             - name: ConnectionStrings__ReviewDatabase
               valueFrom:
@@ -640,6 +706,8 @@ spec:
 
             - name: Services__ProductService
               value: "http://product-service:8080/"
+            - name: Services__OrderService
+              value: "http://order-service:8080/"
           resources:
             requests:
               cpu: "100m"
@@ -662,5 +730,313 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promotion-service
+  namespace: luvora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: promotion-service
+  template:
+    metadata:
+      labels:
+        app: promotion-service
+    spec:
+      containers:
+        - name: promotion-service
+          image: luvora-promotion-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ConnectionStrings__PromotionDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__PromotionDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+            - name: Services__CartService
+              value: "http://cart-service:8080/"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: promotion-service
+  namespace: luvora
+spec:
+  selector:
+    app: promotion-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-service
+  namespace: luvora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: support-service
+  template:
+    metadata:
+      labels:
+        app: support-service
+    spec:
+      containers:
+        - name: support-service
+          image: luvora-support-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ConnectionStrings__SupportDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__SupportDatabase
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: JWT_KEY
+            - name: Jwt__Issuer
+              value: "Luvora.AuthService"
+            - name: Jwt__Audience
+              value: "Luvora.Client"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: support-service
+  namespace: luvora
+spec:
+  selector:
+    app: support-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: luvora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+    spec:
+      containers:
+        - name: reporting-service
+          image: luvora-reporting-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ConnectionStrings__ReportingDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__ReportingDatabase
+            - name: ServiceUrls__Auth
+              value: "http://auth-service:8080/"
+            - name: ServiceUrls__Inventory
+              value: "http://inventory-service:8080/"
+            - name: ServiceUrls__Order
+              value: "http://order-service:8080/"
+            - name: ServiceUrls__Payment
+              value: "http://payment-service:8080/"
+            - name: ServiceUrls__Delivery
+              value: "http://delivery-service:8080/"
+            - name: ServiceUrls__Promotion
+              value: "http://promotion-service:8080/"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: luvora
+spec:
+  selector:
+    app: reporting-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configuration-service
+  namespace: luvora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configuration-service
+  template:
+    metadata:
+      labels:
+        app: configuration-service
+    spec:
+      containers:
+        - name: configuration-service
+          image: luvora-configuration-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ConnectionStrings__ConfigurationDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__ConfigurationDatabase
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configuration-service
+  namespace: luvora
+spec:
+  selector:
+    app: configuration-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: luvora
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+    spec:
+      containers:
+        - name: audit-service
+          image: luvora-audit-service:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ConnectionStrings__AuditDatabase
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-db-secret
+                  key: ConnectionStrings__AuditDatabase
+            - name: ServiceUrls__Gateway
+              value: "http://api-gateway:8080/"
+            - name: ServiceUrls__Auth
+              value: "http://auth-service:8080/"
+            - name: ServiceUrls__Product
+              value: "http://product-service:8080/"
+            - name: ServiceUrls__Inventory
+              value: "http://inventory-service:8080/"
+            - name: ServiceUrls__Order
+              value: "http://order-service:8080/"
+            - name: ServiceUrls__Payment
+              value: "http://payment-service:8080/"
+            - name: ServiceUrls__Delivery
+              value: "http://delivery-service:8080/"
+            - name: ServiceUrls__Promotion
+              value: "http://promotion-service:8080/"
+            - name: ServiceUrls__Support
+              value: "http://support-service:8080/"
+            - name: ServiceUrls__Reporting
+              value: "http://reporting-service:8080/"
+            - name: ServiceUrls__Configuration
+              value: "http://configuration-service:8080/"
+            - name: ServiceUrls__Audit
+              value: "http://audit-service:8080/"
+            - name: ServiceUrls__Notification
+              value: "http://notification-service:8080/"
+            - name: ServiceUrls__Review
+              value: "http://review-service:8080/"
+            - name: Audit__IngestKey
+              valueFrom:
+                secretKeyRef:
+                  name: luvora-app-secret
+                  key: AUDIT_INGEST_KEY
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+  namespace: luvora
+spec:
+  selector:
+    app: audit-service
+  ports:
+    - port: 8080
+      targetPort: 8080

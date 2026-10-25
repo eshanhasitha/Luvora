@@ -13,6 +13,11 @@ spec:
 
   ingress:
     - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+    - from:
         - podSelector:
             matchLabels:
               app: auth-service
@@ -40,6 +45,21 @@ spec:
         - podSelector:
             matchLabels:
               app: review-service
+        - podSelector:
+            matchLabels:
+              app: promotion-service
+        - podSelector:
+            matchLabels:
+              app: support-service
+        - podSelector:
+            matchLabels:
+              app: reporting-service
+        - podSelector:
+            matchLabels:
+              app: configuration-service
+        - podSelector:
+            matchLabels:
+              app: audit-service
       ports:
         - protocol: TCP
           port: 5432
