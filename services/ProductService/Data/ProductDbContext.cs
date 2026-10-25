@@ -36,6 +36,8 @@ public class ProductDbContext : DbContext
             entity.Property(p => p.Description) .HasMaxLength(5000); 
             entity.Property(p => p.Brand) .HasMaxLength(150); 
             entity.Property(p => p.SKU) .IsRequired() .HasMaxLength(100); 
+            entity.Property(p => p.Sizes).HasColumnType("text[]").IsRequired();
+            entity.Property(p => p.Colors).HasColumnType("text[]").IsRequired();
             entity.Property(p => p.Price) .HasPrecision(18, 2); 
             entity.Property(p => p.DiscountPrice) .HasPrecision(18, 2); 
             entity.HasIndex(p => p.Slug) .IsUnique(); 

@@ -11,6 +11,8 @@ public class ProductResponse
     public decimal? DiscountPrice { get; set; } 
     public string Brand { get; set; } = string.Empty; 
     public string SKU { get; set; } = string.Empty; 
+    public List<string> Sizes { get; set; } = new();
+    public List<string> Colors { get; set; } = new();
     public bool IsActive { get; set; } 
     public List<string> ImageUrls { get; set; } = new(); 
 }

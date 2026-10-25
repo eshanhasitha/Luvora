@@ -19,5 +19,9 @@ public class CreateProductRequest
     [Required] 
     [MaxLength(100)] 
     public string SKU { get; set; } = string.Empty; 
+    [MaxLength(50)]
+    public List<string> Sizes { get; set; } = new();
+    [MaxLength(50)]
+    public List<string> Colors { get; set; } = new();
     public List<string> ImageUrls { get; set; } = new(); 
 }

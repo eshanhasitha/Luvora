@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ProductService.Data;
 using ProductService.DTOs;
 using ProductService.Models;
+using ProductService.Services;
 
 namespace ProductService.Controllers;
 
@@ -30,6 +31,9 @@ public sealed class AdminProductsController(ProductDbContext db) : ControllerBas
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductRequest request)
     {
+        if (!ProductOptionNormalizer.TryNormalize(request.Sizes, 50, 80, out var sizes)
+            || !ProductOptionNormalizer.TryNormalize(request.Colors, 50, 80, out var colors))
+            return BadRequest(new { message = "Sizes and colors may each contain up to 50 values, with no value longer than 80 characters." });
         if (!await db.Categories.AnyAsync(x => x.Id == request.CategoryId)) return BadRequest(new { message = "Category does not exist." });
         if (await db.Products.AnyAsync(x => x.SKU == request.SKU.Trim())) return Conflict(new { message = "A product with this SKU already exists." });
         var slugBase = Slug(request.Name);
@@ -38,11 +42,11 @@ public sealed class AdminProductsController(ProductDbContext db) : ControllerBas
         while (await db.Products.AnyAsync(x => x.Slug == slug)) slug = $"{slugBase}-{suffix++}";
         var product = new Product { Id = Guid.NewGuid(), CategoryId = request.CategoryId, Name = request.Name.Trim(), Slug = slug,
             Description = request.Description.Trim(), Price = request.Price, DiscountPrice = request.DiscountPrice,
-            Brand = request.Brand.Trim(), SKU = request.SKU.Trim(), IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            Brand = request.Brand.Trim(), SKU = request.SKU.Trim(), Sizes = sizes, Colors = colors, IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         foreach (var url in request.ImageUrls.Where(x => !string.IsNullOrWhiteSpace(x)))
             product.Images.Add(new ProductImage { Id = Guid.NewGuid(), ImageUrl = url.Trim(), DisplayOrder = product.Images.Count, IsPrimary = product.Images.Count == 0 });
         db.Products.Add(product); await db.SaveChangesAsync();
-        return Created($"/api/admin/products/{product.Id}", new { product.Id, product.Name, product.Slug, product.CategoryId, product.Price, product.SKU, product.IsActive });
+        return Created($"/api/admin/products/{product.Id}", new { product.Id, product.Name, product.Slug, product.CategoryId, product.Price, product.SKU, product.Sizes, product.Colors, product.IsActive });
     }
 
     [HttpPatch("{productId:guid}/status")]

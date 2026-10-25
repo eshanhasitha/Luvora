@@ -63,6 +63,9 @@ public class ProductsController : ControllerBase
         CreateProductRequest request) 
         
     { 
+        if (!ProductOptionNormalizer.TryNormalize(request.Sizes, 50, 80, out var sizes)
+            || !ProductOptionNormalizer.TryNormalize(request.Colors, 50, 80, out var colors))
+            return BadRequest(new { message = "Sizes and colors may each contain up to 50 values, with no value longer than 80 characters." });
         var categoryExists = await _dbContext.Categories 
             .AnyAsync(c => c.Id == request.CategoryId); 
         if (!categoryExists) 
@@ -109,6 +112,8 @@ public class ProductsController : ControllerBase
             DiscountPrice = request.DiscountPrice, 
             Brand = request.Brand.Trim(), 
             SKU = request.SKU.Trim(), 
+            Sizes = sizes,
+            Colors = colors,
             IsActive = true, 
             CreatedAt = DateTime.UtcNow, 
             UpdatedAt = DateTime.UtcNow 
@@ -283,7 +288,7 @@ public class ProductsController : ControllerBase
         if (!await _dbContext.Categories.AnyAsync(x => x.Id == categoryId && x.IsActive)) return NotFound();
         var query = _dbContext.Products.AsNoTracking().Where(x => x.CategoryId == categoryId && x.IsActive);
         var total = await query.CountAsync();
-        return Ok(new { page, pageSize, totalItems = total, products = await query.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize).Select(x => new { x.Id, x.Name, x.Slug, x.Price, x.DiscountPrice, x.Brand }).ToListAsync() });
+        return Ok(new { page, pageSize, totalItems = total, products = await query.OrderBy(x => x.Name).Skip((page - 1) * pageSize).Take(pageSize).Select(x => new { x.Id, x.Name, x.Slug, x.Price, x.DiscountPrice, x.Brand, x.Sizes, x.Colors }).ToListAsync() });
     }
 
     // Frontend contract: GET /api/products/{slug}. Route constraints keep
@@ -304,6 +309,8 @@ public class ProductsController : ControllerBase
             DiscountPrice = product.DiscountPrice, 
             Brand = product.Brand, 
             SKU = product.SKU, 
+            Sizes = product.Sizes,
+            Colors = product.Colors,
             IsActive = product.IsActive, 
             ImageUrls = product.Images 
                 .OrderBy(i => i.DisplayOrder) 
@@ -389,6 +396,10 @@ public class ProductsController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        if (!ProductOptionNormalizer.TryNormalize(request.Sizes, 50, 80, out var sizes)
+            || !ProductOptionNormalizer.TryNormalize(request.Colors, 50, 80, out var colors))
+            return BadRequest(new { message = "Sizes and colors may each contain up to 50 values, with no value longer than 80 characters." });
+
         var categoryExists = await _dbContext.Categories
             .AnyAsync(c => c.Id == request.CategoryId);
         if (!categoryExists)
@@ -437,6 +448,8 @@ public class ProductsController : ControllerBase
         product.DiscountPrice = request.DiscountPrice;
         product.Brand = request.Brand.Trim();
         product.SKU = request.SKU.Trim();
+        product.Sizes = sizes;
+        product.Colors = colors;
         product.Slug = generatedSlug;
         product.IsActive = request.IsActive;
         product.UpdatedAt = DateTime.UtcNow;
