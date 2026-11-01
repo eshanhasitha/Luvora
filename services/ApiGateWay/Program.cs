@@ -6,6 +6,18 @@ using System.Net.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy
+            .WithOrigins(
+                "http://127.0.0.1:8000",
+                "http://localhost:8000",
+                "https://luvora.social")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT key is not configured.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
@@ -40,6 +52,8 @@ builder.Services
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+app.UseCors("Frontend");
 
 app.Use(async (context, next) =>
 {
