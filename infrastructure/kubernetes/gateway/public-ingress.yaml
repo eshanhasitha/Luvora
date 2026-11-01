@@ -1,0 +1,42 @@
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: luvora-public
+spec:
+  scheme: internet-facing
+  targetType: ip
+  certificateARNs:
+    - arn:aws:acm:sa-east-1:844143819282:certificate/cdecc84b-84b5-403b-b367-f4de68bc01ed
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: luvora-public
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: luvora-public
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway-public
+  namespace: luvora
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+spec:
+  ingressClassName: luvora-public
+  rules:
+    - host: api.luvora.social
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080

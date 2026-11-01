@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: luvora-auth-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-auth-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -94,7 +94,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: luvora-product-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-product-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -178,7 +178,7 @@ spec:
     spec:
       containers:
         - name: inventory-service
-          image: luvora-inventory-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-inventory-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -265,7 +265,7 @@ spec:
     spec:
       containers:
         - name: cart-service
-          image: luvora-cart-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-cart-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -336,7 +336,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: luvora-order-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-order-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -426,7 +426,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: luvora-payment-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-payment-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -515,7 +515,7 @@ spec:
     spec:
       containers:
         - name: delivery-service
-          image: luvora-delivery-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-delivery-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -587,7 +587,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: luvora-notification-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-notification-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -676,7 +676,7 @@ spec:
     spec:
       containers:
         - name: review-service
-          image: luvora-review-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-review-service:1.0
           imagePullPolicy: IfNotPresent
 
           ports:
@@ -748,7 +748,7 @@ spec:
     spec:
       containers:
         - name: promotion-service
-          image: luvora-promotion-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-promotion-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -808,7 +808,7 @@ spec:
     spec:
       containers:
         - name: support-service
-          image: luvora-support-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-support-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -866,7 +866,7 @@ spec:
     spec:
       containers:
         - name: reporting-service
-          image: luvora-reporting-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-reporting-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -927,7 +927,7 @@ spec:
     spec:
       containers:
         - name: configuration-service
-          image: luvora-configuration-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-configuration-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -976,7 +976,7 @@ spec:
     spec:
       containers:
         - name: audit-service
-          image: luvora-audit-service:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-audit-service:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

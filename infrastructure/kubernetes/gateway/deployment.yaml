@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: luvora-api-gateway:1.0
+          image: 844143819282.dkr.ecr.eu-north-1.amazonaws.com/luvora-api-gateway:1.0
 
           imagePullPolicy: IfNotPresent
 

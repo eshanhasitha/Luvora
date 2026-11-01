@@ -1,7 +1,8 @@
 # Deploy the backend to the selected Kubernetes context. For a remote cluster,
 # pass a registry path, for example: -Context my-cluster -Registry mydockerid/luvora.
-# The remote cluster must already have the luvora-db-secret, luvora-app-secret,
-# and rabbitmq-secret configured. Persistent storage must be available for PVCs.
+# The remote cluster must already have the postgres-secret, luvora-db-secret,
+# luvora-app-secret, and rabbitmq-secret configured. Persistent storage must be
+# available for PVCs (apply the appropriate StorageClass before this script).
 param(
     [string]$Context = "docker-desktop",
     [string]$Registry = "",

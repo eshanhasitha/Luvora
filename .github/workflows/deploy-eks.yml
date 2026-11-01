@@ -1,0 +1,139 @@
+name: Deploy backend to EKS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - '.github/workflows/deploy-eks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-eks-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ECR_REGION: eu-north-1
+  EKS_REGION: sa-east-1
+  EKS_CLUSTER: luvora-cluster
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: ApiGateWay
+            image: luvora-api-gateway
+          - project: AuditService
+            image: luvora-audit-service
+          - project: AuthService
+            image: luvora-auth-service
+          - project: CartService
+            image: luvora-cart-service
+          - project: ConfigurationService
+            image: luvora-configuration-service
+          - project: DeliveryService
+            image: luvora-delivery-service
+          - project: InventoryService
+            image: luvora-inventory-service
+          - project: NotificationService
+            image: luvora-notification-service
+          - project: OrderService
+            image: luvora-order-service
+          - project: PaymentService
+            image: luvora-payment-service
+          - project: ProductService
+            image: luvora-product-service
+          - project: PromotionService
+            image: luvora-promotion-service
+          - project: ReportingService
+            image: luvora-reporting-service
+          - project: ReviewService
+            image: luvora-review-service
+          - project: SupportService
+            image: luvora-support-service
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.ECR_REGION }}
+
+      - name: Sign in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE: ${{ matrix.image }}
+          PROJECT: ${{ matrix.project }}
+        run: |
+          docker build \
+            --file "services/${PROJECT}/Dockerfile" \
+            --tag "${REGISTRY}/${IMAGE}:${GITHUB_SHA}" \
+            services
+          docker push "${REGISTRY}/${IMAGE}:${GITHUB_SHA}"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.EKS_REGION }}
+
+      - name: Configure kubectl
+        run: aws eks update-kubeconfig --region "$EKS_REGION" --name "$EKS_CLUSTER"
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Update EKS deployments
+        env:
+          ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+        run: |
+          registry="${ACCOUNT_ID}.dkr.ecr.${ECR_REGION}.amazonaws.com"
+          while read -r deployment image; do
+            kubectl set image "deployment/${deployment}" \
+              "${deployment}=${registry}/${image}:${GITHUB_SHA}" \
+              --namespace luvora
+          done <<'DEPLOYMENTS'
+          api-gateway luvora-api-gateway
+          audit-service luvora-audit-service
+          auth-service luvora-auth-service
+          cart-service luvora-cart-service
+          configuration-service luvora-configuration-service
+          delivery-service luvora-delivery-service
+          inventory-service luvora-inventory-service
+          notification-service luvora-notification-service
+          order-service luvora-order-service
+          payment-service luvora-payment-service
+          product-service luvora-product-service
+          promotion-service luvora-promotion-service
+          reporting-service luvora-reporting-service
+          review-service luvora-review-service
+          support-service luvora-support-service
+          DEPLOYMENTS
+
+      - name: Wait for deployments
+        run: |
+          for deployment in \
+            api-gateway audit-service auth-service cart-service \
+            configuration-service delivery-service inventory-service \
+            notification-service order-service payment-service product-service \
+            promotion-service reporting-service review-service support-service; do
+            kubectl rollout status "deployment/${deployment}" \
+              --namespace luvora --timeout=300s
+          done

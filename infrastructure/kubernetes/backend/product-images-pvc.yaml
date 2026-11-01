@@ -4,6 +4,7 @@ metadata:
   name: product-images-pvc
   namespace: luvora
 spec:
+  storageClassName: auto-ebs-gp3
   accessModes:
     - ReadWriteOnce
   resources:

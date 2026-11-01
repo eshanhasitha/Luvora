@@ -26,6 +26,10 @@ spec:
               cpu: 500m
               memory: 512Mi
           env:
+            # EBS filesystems contain a lost+found directory at the mount root.
+            # PostgreSQL needs an empty subdirectory as PGDATA.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
